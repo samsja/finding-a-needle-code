@@ -1,0 +1,5 @@
+[gerrit]
+host=gerrit.cicd.autoheim.net
+port=29418
+project=thesis_data_search
+defaultbranch=master
