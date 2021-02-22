@@ -1,7 +1,7 @@
 import torch
 import torchvision
-from data_handler import FewShotDataSet
 
+from .datasets import FewShotDataSet
 
 class Omniglot(torchvision.datasets.Omniglot, FewShotDataSet):
     def __init__(self, *args, **kwargs):
@@ -23,4 +23,6 @@ class Omniglot(torchvision.datasets.Omniglot, FewShotDataSet):
         return torch.arange(
             class_idx * self.length_of_class, (class_idx + 1) * self.length_of_class
         )
+
+
 

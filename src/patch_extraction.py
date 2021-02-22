@@ -4,7 +4,7 @@ from PIL import Image
 import os
 import sys
 
-data_path = "traffic-signs"
+data_path = "data/traffic-signs"
 
 sub_path = "converted"
 img_path = f"{data_path}/{sub_path}/images/"

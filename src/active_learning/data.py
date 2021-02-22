@@ -24,7 +24,7 @@ class LabeledDataset(Dataset):
             self.data[c] = []
             self.unlabeled[c] = []
 
-            list_of_datapoints = os.listdir(root_dir+"/"+c)
+            list_of_datapoints = os.listdir(root_dir + "/" + c)
             shuffle(list_of_datapoints)
 
             self.data[c] = list_of_datapoints[:k]
@@ -36,7 +36,7 @@ class LabeledDataset(Dataset):
     def __getitem__(self, idx):
         c = self.data.keys()[idx]
         tmp = sample(self.data[c], 6)
-        
+
         q = torch.tensor(io.imread(self.root + "/" + c + "/" + tmp[0]))
 
         s = []
@@ -47,10 +47,9 @@ class LabeledDataset(Dataset):
 
         return q, s
 
-
     def get_support(self, c: str):
         tmp = sample(self.data[c], 5)
-        
+
         s = []
         for fn in tmp[1:]:
             s.append(io.imread(fn))
@@ -58,14 +57,11 @@ class LabeledDataset(Dataset):
         s = torch.tensor(s)
 
         return s
-        
+
     def add_datapoints(self, datapoints: list):
         for datapoint in datapoints:
             fn, c = datapoint[0], datapoint[1]
             self.data[c].append(fn)
-
-
-
 
 
 class UnlabeledDataset(Dataset):
@@ -81,19 +77,17 @@ class UnlabeledDataset(Dataset):
         for c in data_pool:
             for fn in c.values():
                 self.data[fn] = c
-            
+
     def __len__(self):
         return len(self.data)
 
     def __getitem__(self, idx):
-        fn = self.data.values()[idx]   
+        fn = self.data.values()[idx]
         c = self.data[fn]
 
         q = torch.tensor(io.imread(self.root + "/" + c + "/" + fn))
 
-        x = {"image" : q, 
-             "fn" : fn,
-             "label" : c}
+        x = {"image": q, "fn": fn, "label": c}
 
         return x
 
