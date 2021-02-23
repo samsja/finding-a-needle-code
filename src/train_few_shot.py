@@ -43,12 +43,11 @@ for epoch in epochs:
 
         inputs,labels = batch
 
-        inputs = inputs.view(nb_ep,k,n+q,1,105,105)
-        labels = labels.view(nb_ep,k,n+q)
+        inputs = inputs.view(k,n+q,1,105,105)
+        labels = labels.view(k,n+q)
 
-        support_inputs,support_labels = inputs[:,:,:n] , labels[:,:,:n] 
-        queries_inputs, queries_labels = inputs[:,:,-q:] ,labels[:,:,-q:]
-
+        support_inputs,support_labels = inputs[:,:n] , labels[:,:n] 
+        queries_inputs, queries_labels = inputs[:,-q:] ,labels[:,-q:]
         """
         training phase
         """
