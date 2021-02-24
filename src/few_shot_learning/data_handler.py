@@ -69,10 +69,10 @@ class FewShotSampler(torch.utils.data.Sampler):
         return self.episode
 
     def __iter__(self) -> Iterator:
-        
+
         """
         iterator method needed for the sampler
-        
+
         # yield:
             return the index of the batch_size batches compose of episodes with each time a support and queries, the indexes are reshape in a (X,1) tensor
         """
