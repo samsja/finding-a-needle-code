@@ -11,7 +11,7 @@ class FewShotSampler(torch.utils.data.Sampler):
         sample_per_class: int = 1,
         classes_per_ep: int = 1,
         queries: int = 1,
-        ):
+    ):
 
         """Pytorch sampler to generates batches
 
@@ -21,7 +21,7 @@ class FewShotSampler(torch.utils.data.Sampler):
             sample_per_class: int. Number of sample of each class
             class_it: int. Number of classes in the episode
             queries: number of queries for each selected class
-                    """
+        """
 
         super(FewShotSampler, self).__init__(dataset)
 
@@ -31,7 +31,7 @@ class FewShotSampler(torch.utils.data.Sampler):
         self.classes_per_ep = classes_per_ep
         self.queries = queries
         self.episodes = episodes
-        
+
     def __len__(self) -> int:
         """
         len method needed to define a sampler
@@ -52,7 +52,7 @@ class FewShotSampler(torch.utils.data.Sampler):
         """
 
         index_to_yield: torch.Tensor[[torch.int, torch.int, torch.int]] = torch.zeros(
-            (self.classes_per_ep, self.sample_per_class+self.queries),
+            (self.classes_per_ep, self.sample_per_class + self.queries),
             dtype=torch.int,
         )
         for episode in range(self.episodes):
