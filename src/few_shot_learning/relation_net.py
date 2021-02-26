@@ -75,7 +75,7 @@ class BasicRelationModule(nn.Module):
         """
 
         super(BasicRelationModule, self).__init__()
-
+        
         self.conv1 = get_conv_block_mp(input_size * 2, input_size)
 
         self.conv2 = get_conv_block_mp(input_size, input_size)
@@ -110,12 +110,13 @@ class RelationNet(torch.nn.Module):
         debug: bool. if true debug mode activate defaulf  False
     """
 
-    def __init__(self, in_channels: int, out_channels: int, debug: bool = False):
+    def __init__(self, in_channels: int, out_channels: int, device: torch.device,debug: bool = False):
         super().__init__()
 
         self.embedding = BasicEmbeddingModule(in_channels, out_channels)
         self.relation = BasicRelationModule(out_channels)
         self.debug = debug
+        self.device = device
 
     def _concat_features(
         self, feature_support: torch.Tensor, feature_queries: torch.Tensor
@@ -131,14 +132,14 @@ class RelationNet(torch.nn.Module):
         features_shape[2] += feature_queries.size(1)
         features_shape[1] = feature_queries.size(0)
 
-        features_cat = torch.zeros(features_shape)
+        features_cat = torch.zeros(features_shape).to(self.device)
 
         for i in range(features_cat.size(0)):
             for j in range(features_cat.size(1)):
 
                 features_cat[i, j] = torch.cat(
                     (feature_support[i].squeeze(0), feature_queries[j]), 0
-                )
+                ).to(self.device)
 
         return features_cat
 
@@ -154,7 +155,7 @@ class RelationNet(torch.nn.Module):
         for class_support in support:
             feature_support.append(self.embedding(class_support))
 
-        feature_support = torch.stack(feature_support)
+        feature_support = torch.stack(feature_support).to(self.device)
         feature_support = feature_support.sum(dim=1)
         feature_support = feature_support.unsqueeze(1)
 
@@ -172,7 +173,7 @@ class RelationNet(torch.nn.Module):
             relation_table: torch.tensor. R_i_j is the relation score between queries i and class j
         """
 
-        relation_table = torch.zeros(queries.size(1), queries.size(0), support.size(0))
+        relation_table = torch.zeros(queries.size(1), queries.size(0), support.size(0)).to(self.device)
 
         features_support = self._get_features_support(support)
 

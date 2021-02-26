@@ -11,7 +11,11 @@ class FewShotDataSet(torch.utils.data.Dataset):
 
     def __init__(self, *argv):
         super(torch.utils.data.Dataset, self).__init__(*argv)
-        self.classes: torch.Tensor[torch.int] = torch.Tensor([])
+        self._classes: torch.Tensor[torch.int] = torch.Tensor([])
+
+    @property
+    def classes(self):
+        return self._classes
 
     def get_index_in_class(self, class_idx: int):
         """
