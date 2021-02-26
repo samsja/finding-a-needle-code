@@ -6,6 +6,7 @@ from tqdm import tqdm
 import os
 
 
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 from few_shot_learning import FewShotDataSet, FewShotSampler,Omniglot,RelationNet
 
@@ -31,6 +32,9 @@ q = few_shot_sampler.queries
 epochs = 5
 loss_func = nn.MSELoss()
 model = RelationNet(in_channels=1,out_channels=64,debug=True)
+model.to(device)
+
+
 
 lr = 1e-1
 
@@ -50,13 +54,14 @@ for epoch in tqdm(range(epochs)):
 
         inputs,labels = batch
 
-        inputs = inputs.view(k,n+q,1,105,105)
-        labels = labels.view(k,n+q)
+        inputs = inputs.view(k,n+q,1,105,105).to(device)
+        labels = labels.view(k,n+q).to(device)
+
 
         support_inputs,support_labels = inputs[:,:n] , labels[:,:n] 
         queries_inputs, queries_labels = inputs[:,-q:] ,labels[:,-q:]
         
-        targets = torch.eye(len(queries_inputs)).repeat(queries_inputs.size(1),1,1)
+        targets = torch.eye(len(queries_inputs)).repeat(queries_inputs.size(1),1,1).to(device)
 
         
         outputs = model(support_inputs,queries_inputs)
@@ -70,6 +75,5 @@ for epoch in tqdm(range(epochs)):
         list_loss.append(loss.item())
         
         optim.step()
-
 
 plt.plot(list_loss)
