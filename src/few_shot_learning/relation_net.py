@@ -4,24 +4,27 @@ from typing import List, Tuple, Any
 import torch.nn.functional as F
 
 
-def get_conv_block_mp(in_channels: int, out_channels: int) -> nn.Module:
+def get_conv_block_mp(
+    in_channels: int, out_channels: int, padding: int = 0
+) -> nn.Module:
     """
     Returns a Module that performs 3x3 convolution, ReLu activation, 2x2 max pooling.
 
     # Arguments
         in_channels:
         out_channels:
+        padding:
     """
 
     return nn.Sequential(
-        nn.Conv2d(in_channels, out_channels, 3, padding=0),
+        nn.Conv2d(in_channels, out_channels, 3, padding=padding),
         nn.BatchNorm2d(out_channels, affine=True, momentum=1),
         nn.ReLU(),
         nn.MaxPool2d(kernel_size=2),
     )
 
 
-def get_conv_block(in_channels: int, out_channels: int) -> nn.Module:
+def get_conv_block(in_channels: int, out_channels: int, padding: int = 1) -> nn.Module:
     """
     Returns a Module that performs 3x3 convolution, ReLu activatio.
 
@@ -31,7 +34,7 @@ def get_conv_block(in_channels: int, out_channels: int) -> nn.Module:
     """
 
     return nn.Sequential(
-        nn.Conv2d(in_channels, out_channels, 3, padding=1),
+        nn.Conv2d(in_channels, out_channels, 3, padding=padding),
         nn.BatchNorm2d(out_channels, affine=True, momentum=1),
         nn.ReLU(),
     )
@@ -66,21 +69,26 @@ class BasicEmbeddingModule(nn.Module):
 
 
 class BasicRelationModule(nn.Module):
-    def __init__(self, input_size: int, hidden_size: int = 8):
+    def __init__(self, input_size: int, hidden_size: int = 8, adaptative_size: int = 2):
         """
         Basic BasicRelationModule for the RelationNet
         # Arguments
             input_size: int. feature space dimension
             hidden_size: int. size of the hidden layer
+            adaptative_size : int. size of the
         """
 
         super(BasicRelationModule, self).__init__()
-        
-        self.conv1 = get_conv_block_mp(input_size * 2, input_size)
 
-        self.conv2 = get_conv_block_mp(input_size, input_size)
+        self.conv1 = get_conv_block_mp(input_size * 2, input_size, padding=1)
 
-        self.linear1 = nn.Linear(input_size * 16, hidden_size)
+        #  self.conv2 = get_conv_block(input_size, input_size, padding=1)
+        #
+        #  self.adapt = nn.AdaptiveMaxPool2d(adaptative_size)
+        #
+        self.conv2 = get_conv_block_mp(input_size, input_size, padding=1)
+        self.linear1 = nn.Linear(input_size * adaptative_size ** 2, hidden_size)
+        self.linear1 = nn.Linear(input_size, hidden_size)
         self.linear2 = nn.Linear(hidden_size, 1)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -88,8 +96,9 @@ class BasicRelationModule(nn.Module):
         forward method
         """
         x = self.conv1(x)
-        x = self.conv2(x)
 
+        x = self.conv2(x)
+        # x = self.adapt(x)
         x = x.view(x.size(0), -1)
 
         x = self.linear1(x)
@@ -110,7 +119,13 @@ class RelationNet(torch.nn.Module):
         debug: bool. if true debug mode activate defaulf  False
     """
 
-    def __init__(self, in_channels: int, out_channels: int, device: torch.device,debug: bool = False):
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        device: torch.device,
+        debug: bool = False,
+    ):
         super().__init__()
 
         self.embedding = BasicEmbeddingModule(in_channels, out_channels)
@@ -132,14 +147,14 @@ class RelationNet(torch.nn.Module):
         features_shape[2] += feature_queries.size(1)
         features_shape[1] = feature_queries.size(0)
 
-        features_cat = torch.zeros(features_shape).to(self.device)
+        features_cat = torch.zeros(features_shape, device=self.device)
 
         for i in range(features_cat.size(0)):
             for j in range(features_cat.size(1)):
 
                 features_cat[i, j] = torch.cat(
                     (feature_support[i].squeeze(0), feature_queries[j]), 0
-                ).to(self.device)
+                )
 
         return features_cat
 
@@ -155,7 +170,7 @@ class RelationNet(torch.nn.Module):
         for class_support in support:
             feature_support.append(self.embedding(class_support))
 
-        feature_support = torch.stack(feature_support).to(self.device)
+        feature_support = torch.stack(feature_support)
         feature_support = feature_support.sum(dim=1)
         feature_support = feature_support.unsqueeze(1)
 
@@ -173,16 +188,27 @@ class RelationNet(torch.nn.Module):
             relation_table: torch.tensor. R_i_j is the relation score between queries i and class j
         """
 
-        relation_table = torch.zeros(queries.size(1), queries.size(0), support.size(0)).to(self.device)
+        relation_table = torch.zeros(
+            queries.size(0),
+            queries.size(2),
+            queries.size(1),
+            support.size(1),
+            device=self.device,
+        )
 
-        features_support = self._get_features_support(support)
+        for episode in range(queries.size(0)):
 
-        for i, queries_class in enumerate(queries):
-            features_queries_class = self.embedding(queries_class)
-            features_cat = self._concat_features(
-                features_support, features_queries_class
-            )
+            features_support = self._get_features_support(support[episode])
 
-            for j in range(features_cat.size(1)):
-                relation_table[j, i] = self.relation(features_cat[:, j]).flatten()
+            for i, queries_class in enumerate(queries[episode]):
+                features_queries_class = self.embedding(queries_class)
+                features_cat = self._concat_features(
+                    features_support, features_queries_class
+                )
+
+                for j in range(features_cat.size(1)):
+                    relation_table[episode, j, i] = self.relation(
+                        features_cat[:, j]
+                    ).flatten()
+
         return relation_table
