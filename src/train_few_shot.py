@@ -17,7 +17,7 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("-n", default=5, type=int)
 parser.add_argument("-k", default=5, type=int)
-parser.add_argument("-q", default=5, type=int)
+parser.add_argument("-q", default=15, type=int)
 parser.add_argument("--nb_ep", default=10, type=int)
 parser.add_argument("--nb_epochs", default=10, type=int)
 parser.add_argument("--nb_eval", default=20, type=int)
@@ -32,20 +32,29 @@ nb_ep = args.nb_ep
 k = args.k
 q = args.q
 n = args.n
-nb_of_batch = args.nb_of_batch
+number_of_batch = args.nb_of_batch
 
+transform = torchvision.transforms.Compose(
+    [
+        # torchvision.transforms.RandomRotation(90,expand=True),
+        # torchvision.transforms.RandomRotation(180,expand=True),
+        # torchvision.transforms.RandomRotation(270,expand=True),
+        torchvision.transforms.Resize(28, interpolation=2),
+        torchvision.transforms.ToTensor(),
+    ]
+)
 
 bg_dataset = Omniglot(
-    root="./data",
+    root="/staging/thesis_data_search/data",
     download=True,
-    transform=torchvision.transforms.ToTensor(),
+    transform=transform,
     background=True,
 )
 
 eval_dataset = Omniglot(
-    root="./data",
+    root="/staging/thesis_data_search/data",
     download=True,
-    transform=torchvision.transforms.ToTensor(),
+    transform=transform,
     background=False,
 )
 
@@ -53,22 +62,21 @@ eval_dataset = Omniglot(
 # ## Train
 
 # In[12]:
-def eval_model(inputs_eval, model, loss_func):
 
-    inputs_eval = inputs_eval.view(
-        ep, k, n + q, 1, inputs_eval.shape[-2], inputs_eval.shape[-1]
-    ).to(device)
 
-    support_inputs_eval = inputs_eval[:, :, :n]
-    queries_inputs_eval = inputs_eval[:, :, -q:]
+def apply_model(inputs_eval, model):
 
     targets = (
-        torch.eye(len(queries_inputs_eval))
-        .repeat(queries_inputs_eval.size(1), 1, 1)
-        .to(device)
+        torch.eye(k, device=device).unsqueeze(0).unsqueeze(-1).expand(nb_ep, k, k, q)
     )
+    outputs = model(inputs_eval.to(device), nb_ep, n, k, q)
 
-    outputs = model(support_inputs_eval, queries_inputs_eval)
+    return outputs, targets
+
+
+def eval_model(inputs_eval, model, loss_func):
+
+    outputs, targets = apply_model(inputs_eval, model)
 
     loss = loss_func(outputs, targets)
 
@@ -77,9 +85,10 @@ def eval_model(inputs_eval, model, loss_func):
 
 def train_model(inputs, model, loss_func, optim):
 
+    model.zero_grad()
+
     loss = eval_model(inputs, model, loss_func)
 
-    model.zero_grad()
     loss.backward()
     optim.step()
 
@@ -108,13 +117,11 @@ few_shot_sampler_val = FewShotSampler(
 # In[15]:
 
 
-bg_taskloader = torch.utils.data.DataLoader(
-    bg_dataset, batch_sampler=few_shot_sampler, num_workers=1
-)
+bg_taskloader = torch.utils.data.DataLoader(bg_dataset, batch_sampler=few_shot_sampler)
 
 
 eval_taskloader = torch.utils.data.DataLoader(
-    eval_dataset, batch_sampler=few_shot_sampler_val, num_workers=1
+    eval_dataset, batch_sampler=few_shot_sampler_val
 )
 
 
@@ -139,7 +146,7 @@ list_loss_eval = []
 epochs = args.nb_epochs
 nb_eval = args.nb_eval
 period_eval = max(epochs // nb_eval, 1)
-scheduler.step_size = 20
+
 
 for epoch in range(epochs):
 

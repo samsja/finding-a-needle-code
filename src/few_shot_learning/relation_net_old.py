@@ -109,7 +109,7 @@ class BasicRelationModule(nn.Module):
         return x
 
 
-class RelationNet(torch.nn.Module):
+class RelationNetOld(torch.nn.Module):
     """
     Implementation of the RelationNet model in pytorch
 
@@ -134,13 +134,7 @@ class RelationNet(torch.nn.Module):
         self.device = device
 
     def _concat_features(
-        self,
-        features_supports: torch.Tensor,
-        features_queries: torch.Tensor,
-        episodes: int,
-        sample_per_class: int,
-        classes_per_ep: int,
-        queries: int,
+        self, feature_support: torch.Tensor, feature_queries: torch.Tensor
     ) -> torch.Tensor:
         """
         concat feature
@@ -149,42 +143,40 @@ class RelationNet(torch.nn.Module):
             feature_queries: torch.Tensor. featur for the querie
         """
 
-        # expand without copy memory for the concatenation and cat -> [ep,k,k,q,2*x,y,y]
+        features_shape = list(feature_support.shape)
+        features_shape[2] += feature_queries.size(1)
+        features_shape[1] = feature_queries.size(0)
 
-        features_supports = features_supports.view(
-            episodes, classes_per_ep, 1, 1, *features_supports.shape[-3:]
-        )
+        features_cat = torch.zeros(features_shape, device=self.device)
 
-        features_queries = features_queries.view(
-            episodes, 1, classes_per_ep, *features_queries.shape[-4:]
-        )
+        for i in range(features_cat.size(0)):
+            for j in range(features_cat.size(1)):
 
-        features_supports = features_supports.expand(
-            *features_supports.shape[:2],
-            classes_per_ep,
-            queries,
-            *features_supports.shape[-3:]
-        )
-
-        features_queries = features_queries.expand(
-            features_queries.shape[0], classes_per_ep, *features_queries.shape[-5:]
-        )
-
-        features_cat = torch.cat((features_supports, features_queries), dim=4)
-
-        if self.debug:
-            pass
+                features_cat[i, j] = torch.cat(
+                    (feature_support[i].squeeze(0), feature_queries[j]), 0
+                )
 
         return features_cat
 
-    def forward(
-        self,
-        inputs: torch.Tensor,
-        episodes: int,
-        sample_per_class: int,
-        classes_per_ep: int,
-        queries: int,
-    ) -> torch.Tensor:
+    def _get_features_support(self, support: torch.Tensor) -> torch.Tensor:
+        """
+        project support image to embedded space then sum the features with in each class
+
+        #Arguments:
+            support: torch.tensor. data for the support
+        """
+
+        feature_support = []
+        for class_support in support:
+            feature_support.append(self.embedding(class_support))
+
+        feature_support = torch.stack(feature_support)
+        feature_support = feature_support.sum(dim=1)
+        feature_support = feature_support.unsqueeze(1)
+
+        return feature_support
+
+    def forward(self, support: torch.Tensor, queries: torch.Tensor) -> torch.Tensor:
         """
         forward pass for the relation net
 
@@ -196,33 +188,27 @@ class RelationNet(torch.nn.Module):
             relation_table: torch.tensor. R_i_j is the relation score between queries i and class j
         """
 
-        # appply embedding
-        features = self.embedding(inputs)
-
-        features = features.view(
-            episodes * classes_per_ep, sample_per_class + queries, *features.shape[-3:]
-        )
-        features_supports, features_queries = (
-            features[:, :sample_per_class],
-            features[:, -queries:],
+        relation_table = torch.zeros(
+            queries.size(0),
+            queries.size(2),
+            queries.size(1),
+            support.size(1),
+            device=self.device,
         )
 
-        # sum features over each sample per class
-        features_supports = features_supports.sum(dim=1)
+        for episode in range(queries.size(0)):
 
-        features_cat = self._concat_features(
-            features_supports,
-            features_queries,
-            episodes,
-            sample_per_class,
-            classes_per_ep,
-            queries,
-        )
+            features_support = self._get_features_support(support[episode])
 
-        features_cat_shape = features_cat.shape
+            for i, queries_class in enumerate(queries[episode]):
+                features_queries_class = self.embedding(queries_class)
+                features_cat = self._concat_features(
+                    features_support, features_queries_class
+                )
 
-        features_cat = features_cat.view(-1, *features_cat.shape[-3:])
+                for j in range(features_cat.size(1)):
+                    relation_table[episode, j, i] = self.relation(
+                        features_cat[:, j]
+                    ).flatten()
 
-        relation = self.relation(features_cat)
-
-        return relation.view(*features_cat_shape[:4])
+        return relation_table
