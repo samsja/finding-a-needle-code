@@ -117,19 +117,39 @@ class RelationNet(torch.nn.Module):
         in_channels: int. number of input channels
         out_channels: int. number of input channels
         debug: bool. if true debug mode activate defaulf  False
+        device: (torch.device)
+        relation_module: (torch.nn.Module)
+        embedding_module: (torch.nn.Module)
     """
 
     def __init__(
         self,
-        in_channels: int,
-        out_channels: int,
         device: torch.device,
+        in_channels: int = None,
+        out_channels: int = None,
         debug: bool = False,
+        embedding_module: torch.nn.Module = None,
+        relation_module: torch.nn.Module = None,
     ):
         super().__init__()
 
-        self.embedding = BasicEmbeddingModule(in_channels, out_channels)
-        self.relation = BasicRelationModule(out_channels)
+        if embedding_module is None:
+            if in_channels is None or out_channels is None:
+                raise ValueError(
+                    "In channel and out channel are needed for embedding_module"
+                )
+            self.embedding = BasicEmbeddingModule(in_channels, out_channels)
+        else:
+            self.embedding = embedding_module
+
+        if relation_module is None:
+            if out_channels is None:
+                raise ValueError(" out channel is needed for relation_module")
+
+            self.relation = BasicRelationModule(out_channels)
+        else:
+            self.relation = relation_module
+
         self.debug = debug
         self.device = device
 
