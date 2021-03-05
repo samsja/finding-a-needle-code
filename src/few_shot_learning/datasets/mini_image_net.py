@@ -28,8 +28,7 @@ class MiniImageNet(FewShotDataSet):
         self,
         path: str,
         validation: bool = False,
-        transform: Optional[Callable] = None,
-        max_len: int = 20,
+        transform: Optional[Callable] = None
     ):
         """
         DataSet for the mini image net
@@ -44,9 +43,9 @@ class MiniImageNet(FewShotDataSet):
         """
 
         super(MiniImageNet, self).__init__()
-
-        self.path = path + "/train" if validation else path + "/val"
-
+        self.path = path + "/val" if validation else path + "/train"
+        self.transform = transform
+            
         self._classes_path = list_dir(self.path)
 
         self._classes = torch.arange(len(self._classes_path)).type(torch.long)
@@ -57,6 +56,9 @@ class MiniImageNet(FewShotDataSet):
         ]
 
         self._flat_classe_images: List[Tuple[str, int]] = sum(self._classe_images, [])
+           
+        self._length_of_class = len(self._classe_images[0])
+
 
     def __len__(self):
         return len(self._flat_classe_images)
@@ -70,7 +72,7 @@ class MiniImageNet(FewShotDataSet):
         """
 
         image_name, classe = self._flat_classe_images[index]
-        image_path = join(self.target_folder, self._classes_path[classe], image_name)
+        image_path = join(self.path, self._classes_path[classe], image_name)
         image = Image.open(image_path, mode="r").convert("L")
 
         if self.transform:
@@ -86,4 +88,9 @@ class MiniImageNet(FewShotDataSet):
             class_idx : int. The index of the desired class
 
         """
-        pass
+        return torch.arange(
+            class_idx * self._length_of_class,
+            (class_idx + 1) * self._length_of_class,
+            dtype=torch.long,
+        )
+
