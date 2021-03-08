@@ -19,14 +19,13 @@ output_path = args.output_path
 file_source_image = args.f
 
 
-
 with open(file_source_image) as file:
 
     folder = None
-    
+
     for line in tqdm(file.readlines()):
 
-        if line[0] in [" ","\n"]:
+        if line[0] in [" ", "\n"]:
             continue
         elif line[-2] == ":":
 
@@ -42,12 +41,12 @@ with open(file_source_image) as file:
         img_name = line[:-1]
 
         try:
-             shutil.copyfile(
+            shutil.copyfile(
                 join(path, join(folder, img_name)),
                 join(output_path, join(folder, img_name)),
             )
         except FileNotFoundError as e:
-           
+
             print(
                 f"file {join(path,join(folder,img_name))} does not exist",
                 file=sys.stderr,

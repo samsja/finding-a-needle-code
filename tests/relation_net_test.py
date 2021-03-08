@@ -39,8 +39,13 @@ class TestRelationNet(unittest.TestCase):
         features_cat = self.model._concat_features(
             features_supports, features_queries, self.ep, self.n, self.k, self.q
         )
-        
-        
-        assert features_cat.shape == (self.ep,self.k,self.k,self.q,2*self.f_dim,5,5)
 
-        
+        assert features_cat.shape == (
+            self.ep,
+            self.k,
+            self.k,
+            self.q,
+            2 * self.f_dim,
+            5,
+            5,
+        )
