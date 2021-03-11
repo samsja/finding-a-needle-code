@@ -2,6 +2,8 @@ from src.few_shot_learning import RelationNet
 import torch
 
 import unittest
+import pytest
+
 
 
 class TestRelationNet(unittest.TestCase):

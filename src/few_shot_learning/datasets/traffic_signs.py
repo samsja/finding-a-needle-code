@@ -79,6 +79,9 @@ class TrafficSignDataset(FewShotDataSet):
     def __len__(self):
         return len(self.labels)
 
+    def __len__(self):
+        return len(self.labels)
+
     def add_datapoint(self, file_name, c_idx):
         """
         Method for adding a single data point to the dataset.
