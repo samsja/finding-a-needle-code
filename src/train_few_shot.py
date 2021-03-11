@@ -5,8 +5,14 @@ import torch.nn as nn
 import os
 import torchvision.transforms.functional as TF
 from tqdm import tqdm
-from few_shot_learning import FewShotDataSet, FewShotSampler, Omniglot, RelationNet
-from few_shot_learning import TrainerFewShot,RotationTransform
+from few_shot_learning import (
+    FewShotDataSet,
+    FewShotSampler,
+    Omniglot,
+    RelationNet,
+    RelationNetAdaptater,
+)
+from few_shot_learning import TrainerFewShot, RotationTransform
 
 import argparse
 
@@ -48,7 +54,7 @@ if __name__ == "__main__":
 
     transform_eval = torchvision.transforms.Compose(
         [
-            torchvision.transforms.Resize(28, interpolation=2),
+            torchvision.transforms.Resize(28),
             torchvision.transforms.ToTensor(),
         ]
     )
@@ -58,7 +64,7 @@ if __name__ == "__main__":
             # torchvision.transforms.RandomRotation(90,expand=True),
             # torchvision.transforms.RandomRotation(180,expand=True),
             # torchvision.transforms.RandomRotation(270,expand=True),
-            torchvision.transforms.Resize(28, interpolation=2),
+            torchvision.transforms.Resize(28),
             torchvision.transforms.ToTensor(),
         ]
     )
@@ -120,16 +126,15 @@ if __name__ == "__main__":
     optim = torch.optim.Adam(model.parameters(), lr=lr)
     scheduler = torch.optim.lr_scheduler.StepLR(optim, step_size=step_size, gamma=0.1)
 
-    trainer = TrainerFewShot(model,loss_func,nb_ep,n,k,q,device)
-
+    model_adaptater = RelationNetAdaptater(model, loss_func, nb_ep, n, k, q, device)
+    trainer = TrainerFewShot(model_adaptater, device)
 
     epochs = args.nb_epochs
     nb_eval = args.nb_eval
 
+    trainer.fit(epochs, nb_eval, optim, scheduler, bg_taskloader, eval_taskloader)
 
-    trainer.fit(epochs,nb_eval,optim,scheduler,bg_taskloader,eval_taskloader)
-
-    min(trainer.list_loss_eval),min(trainer.list_loss),max(trainer.accuracy_eval)
+    min(trainer.list_loss_eval), min(trainer.list_loss), max(trainer.accuracy_eval)
 
     few_shot_accuracy_sampler = FewShotSampler(
         bg_dataset,

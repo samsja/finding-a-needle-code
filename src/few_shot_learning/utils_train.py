@@ -18,61 +18,46 @@ class RotationTransform:
         return TF.rotate(x, angle, fill=self.fill)
 
 
+class ModuleAdaptater:
+    """
+    Base adapater class for torch custom module to TrainerFewShot
+    """
+
+    def __init__(self, model: nn.Module):
+        self._model = model
+
+    def get_loss_and_accuracy(self, inputs, labels, accuracy=False):
+        raise NotImplementedError
+
+    @property
+    def model(self):
+        return self._model
+
+
 class TrainerFewShot:
     def __init__(
         self,
-        model: nn.Module,
-        loss_func: nn.modules.loss,
-        nb_ep: int,
-        n: int,
-        k: int,
-        q: int,
+        model_adaptater: ModuleAdaptater,
         device: torch.device,
     ):
         super().__init__()
 
-        self.model = model
-        self.loss_func = loss_func
-        self.nb_ep = nb_ep
-        self.n = n
-        self.k = k
-        self.q = q
+        self.model_adaptater = model_adaptater
         self.device = device
 
         self.list_loss = []
         self.list_loss_eval = []
         self.accuracy_eval = []
 
-    def eval_model(self, inputs_eval, accuracy=False):
-        """
-        evaluate the model get loss and accuracy if accuracy is set to True
-        """
+    def train_model(self, inputs, labels, optim: torch.optim):
 
-        outputs = self.model(
-            inputs_eval.to(self.device), self.nb_ep, self.n, self.k, self.q
-        )
-        targets = (
-            torch.eye(self.k, device=self.device)
-            .unsqueeze(0)
-            .unsqueeze(-1)
-            .expand(self.nb_ep, self.k, self.k, self.q)
-        )
+        self.model_adaptater.model.zero_grad()
 
-        loss = self.loss_func(outputs, targets)
+        loss, _ = self.model_adaptater.get_loss_and_accuracy(inputs, labels)
 
-        if accuracy:
-            accuracy = (outputs.argmax(dim=1) == targets.argmax(dim=1)).float().mean()
-
-        return loss, accuracy
-
-    def train_model(self, inputs, optim: torch.optim):
-
-        self.model.zero_grad()
-
-        loss, _ = self.eval_model(inputs)
         loss.backward()
-        
-        torch.nn.utils.clip_grad_norm_(self.model.parameters(),0.5)
+
+        torch.nn.utils.clip_grad_norm_(self.model_adaptater.model.parameters(), 0.5)
 
         optim.step()
 
@@ -93,13 +78,13 @@ class TrainerFewShot:
 
             list_loss_batch = []
 
-            self.model.train()
+            self.model_adaptater.model.train()
 
             for batch_idx, batch in enumerate(bg_taskloader):
 
                 inputs, labels = batch
 
-                loss = self.train_model(inputs, optim)
+                loss = self.train_model(inputs, labels, optim)
 
                 list_loss_batch.append(loss.item())
 
@@ -110,7 +95,7 @@ class TrainerFewShot:
             if epoch % period_eval == 0:
 
                 with torch.no_grad():
-                    self.model.eval()
+                    self.model_adaptater.model.eval()
 
                     list_loss_batch_eval = []
                     accuracy = 0
@@ -119,8 +104,12 @@ class TrainerFewShot:
 
                         inputs_eval, labels_eval = batch
 
-                        loss, accuracy_batch = self.eval_model(
+                        (
+                            loss,
+                            accuracy_batch,
+                        ) = self.model_adaptater.get_loss_and_accuracy(
                             inputs_eval,
+                            labels_eval,
                             accuracy=True,
                         )
 
@@ -146,11 +135,13 @@ class TrainerFewShot:
         for batch_idx, batch in enumerate(accuracy_taskloader):
 
             with torch.no_grad():
-                self.model.eval()
+                self.model_adaptater.model.eval()
 
                 inputs, labels = batch
 
-                outputs, accuracy_batch = self.eval_model(inputs, accuracy=True)
+                _, accuracy_batch = self.model_adaptater.get_loss_and_accuracy(
+                    inputs, labels, accuracy=True
+                )
 
                 accuracy += accuracy_batch
 
