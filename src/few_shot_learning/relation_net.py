@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from typing import List, Tuple, Any
 import torch.nn.functional as F
+from .utils_train import ModuleAdaptater
 
 
 def get_conv_block_mp(
@@ -69,7 +70,9 @@ class BasicEmbeddingModule(nn.Module):
 
 
 class BasicRelationModule(nn.Module):
-    def __init__(self, input_size: int, hidden_size: int = 8,linear_size: int = None, lazy = False):
+    def __init__(
+        self, input_size: int, hidden_size: int = 8, linear_size: int = None, lazy=False
+    ):
         """
         Basic BasicRelationModule for the RelationNet
         # Arguments
@@ -84,17 +87,16 @@ class BasicRelationModule(nn.Module):
         self.conv1 = get_conv_block_mp(input_size * 2, input_size, padding=1)
 
         self.conv2 = get_conv_block_mp(input_size, input_size, padding=1)
-       
 
         if lazy:
             self.linear1 = nn.LazyLinear(hidden_size)
-        
+
         else:
             if linear_size == None:
-                linear_size =  input_size
+                linear_size = input_size
 
             self.linear1 = nn.Linear(linear_size, hidden_size)
-        
+
         self.linear2 = nn.Linear(hidden_size, 1)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -104,10 +106,10 @@ class BasicRelationModule(nn.Module):
         x = self.conv1(x)
 
         x = self.conv2(x)
-        
+
         x = x.view(x.size(0), -1)
-        
-        #print(x.shape)
+
+        # print(x.shape)
         x = self.linear1(x)
         x = F.relu(x)
         x = self.linear2(x)
@@ -138,7 +140,7 @@ class RelationNet(torch.nn.Module):
         debug: bool = False,
         embedding_module: torch.nn.Module = None,
         relation_module: torch.nn.Module = None,
-        merge_operator: str = "sum"
+        merge_operator: str = "sum",
     ):
         super().__init__()
 
@@ -159,9 +161,9 @@ class RelationNet(torch.nn.Module):
         else:
             self.relation = relation_module
 
-        if not(merge_operator in ["sum","mean"]):
+        if not (merge_operator in ["sum", "mean"]):
             raise ValueError(f"{merge_operator} should be in [sum,mean]")
-        
+
         if merge_operator == "sum":
             self.merge_operator = torch.sum
         elif merge_operator == "mean":
@@ -200,7 +202,7 @@ class RelationNet(torch.nn.Module):
             *features_supports.shape[:2],
             classes_per_ep,
             queries,
-            *features_supports.shape[-3:]
+            *features_supports.shape[-3:],
         )
 
         features_queries = features_queries.expand(
@@ -245,7 +247,7 @@ class RelationNet(torch.nn.Module):
         )
 
         # sum features over each sample per class
-        features_supports = self.merge_operator(features_supports,dim=1)
+        features_supports = self.merge_operator(features_supports, dim=1)
 
         features_cat = self._concat_features(
             features_supports,
@@ -257,9 +259,50 @@ class RelationNet(torch.nn.Module):
         )
 
         features_cat_shape = features_cat.shape
-         
+
         features_cat = features_cat.view(-1, *features_cat.shape[-3:])
 
         relation = self.relation(features_cat)
 
         return relation.view(*features_cat_shape[:4])
+
+
+class RelationNetAdaptater(ModuleAdaptater):
+    """
+    relation net module adaptater
+    """
+
+    def __init__(
+        self,
+        model: nn.Module,
+        loss_func: nn.modules.loss,
+        nb_ep: int,
+        n: int,
+        k: int,
+        q: int,
+        device: torch.device,
+    ):
+        super(RelationNetAdaptater, self).__init__(model)
+        self.nb_ep = nb_ep
+        self.n = n
+        self.k = k
+        self.q = q
+        self.device = device
+        self.loss_func = loss_func
+
+    def get_loss_and_accuracy(self, inputs, labels, accuracy=False):
+        outputs = self.model(inputs.to(self.device), self.nb_ep, self.n, self.k, self.q)
+
+        targets = (
+            torch.eye(self.k, device=self.device)
+            .unsqueeze(0)
+            .unsqueeze(-1)
+            .expand(self.nb_ep, self.k, self.k, self.q)
+        )
+
+        loss = self.loss_func(outputs, targets)
+
+        if accuracy:
+            accuracy = (outputs.argmax(dim=1) == targets.argmax(dim=1)).float().mean()
+
+        return loss, accuracy
