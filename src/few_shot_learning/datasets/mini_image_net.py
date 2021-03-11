@@ -70,7 +70,7 @@ class MiniImageNet(FewShotDataSet):
 
         image_name, classe = self._flat_classe_images[index]
         image_path = join(self.path, self._classes_path[classe], image_name)
-        image = Image.open(image_path, mode="r").convert("L")
+        image = Image.open(image_path, mode="r").convert("RGB")
 
         if self.transform:
             image = self.transform(image)

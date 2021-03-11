@@ -69,26 +69,32 @@ class BasicEmbeddingModule(nn.Module):
 
 
 class BasicRelationModule(nn.Module):
-    def __init__(self, input_size: int, hidden_size: int = 8, adaptative_size: int = 2):
+    def __init__(self, input_size: int, hidden_size: int = 8,linear_size: int = None, lazy = False):
         """
         Basic BasicRelationModule for the RelationNet
         # Arguments
             input_size: int. feature space dimension
             hidden_size: int. size of the hidden layer
-            adaptative_size : int. size of the
+            linear_size: int. size of the linear layer input
+            Lazy : bool. if True will iniliate a Lazy Layer for the first linear
         """
 
         super(BasicRelationModule, self).__init__()
 
         self.conv1 = get_conv_block_mp(input_size * 2, input_size, padding=1)
 
-        #  self.conv2 = get_conv_block(input_size, input_size, padding=1)
-        #
-        #  self.adapt = nn.AdaptiveMaxPool2d(adaptative_size)
-        #
         self.conv2 = get_conv_block_mp(input_size, input_size, padding=1)
-        self.linear1 = nn.Linear(input_size * adaptative_size ** 2, hidden_size)
-        self.linear1 = nn.Linear(input_size, hidden_size)
+       
+
+        if lazy:
+            self.linear1 = nn.LazyLinear(hidden_size)
+        
+        else:
+            if linear_size == None:
+                linear_size =  input_size
+
+            self.linear1 = nn.Linear(linear_size, hidden_size)
+        
         self.linear2 = nn.Linear(hidden_size, 1)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -98,9 +104,10 @@ class BasicRelationModule(nn.Module):
         x = self.conv1(x)
 
         x = self.conv2(x)
-        # x = self.adapt(x)
+        
         x = x.view(x.size(0), -1)
-
+        
+        #print(x.shape)
         x = self.linear1(x)
         x = F.relu(x)
         x = self.linear2(x)
@@ -120,6 +127,7 @@ class RelationNet(torch.nn.Module):
         device: (torch.device)
         relation_module: (torch.nn.Module)
         embedding_module: (torch.nn.Module)
+        merge_operator: str . in ["sum","mean"] if sum will sum the feature vectors within class and mean other wise
     """
 
     def __init__(
@@ -130,6 +138,7 @@ class RelationNet(torch.nn.Module):
         debug: bool = False,
         embedding_module: torch.nn.Module = None,
         relation_module: torch.nn.Module = None,
+        merge_operator: str = "sum"
     ):
         super().__init__()
 
@@ -149,6 +158,14 @@ class RelationNet(torch.nn.Module):
             self.relation = BasicRelationModule(out_channels)
         else:
             self.relation = relation_module
+
+        if not(merge_operator in ["sum","mean"]):
+            raise ValueError(f"{merge_operator} should be in [sum,mean]")
+        
+        if merge_operator == "sum":
+            self.merge_operator = torch.sum
+        elif merge_operator == "mean":
+            self.merge_operator = torch.mean
 
         self.debug = debug
         self.device = device
@@ -228,7 +245,7 @@ class RelationNet(torch.nn.Module):
         )
 
         # sum features over each sample per class
-        features_supports = features_supports.sum(dim=1)
+        features_supports = self.merge_operator(features_supports,dim=1)
 
         features_cat = self._concat_features(
             features_supports,
@@ -240,7 +257,7 @@ class RelationNet(torch.nn.Module):
         )
 
         features_cat_shape = features_cat.shape
-
+         
         features_cat = features_cat.view(-1, *features_cat.shape[-3:])
 
         relation = self.relation(features_cat)

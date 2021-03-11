@@ -71,6 +71,9 @@ class TrainerFewShot:
 
         loss, _ = self.eval_model(inputs)
         loss.backward()
+        
+        torch.nn.utils.clip_grad_norm_(self.model.parameters(),0.5)
+
         optim.step()
 
         return loss
