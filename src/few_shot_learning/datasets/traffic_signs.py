@@ -1,8 +1,9 @@
 import torchvision
+import random
 import torch
 import os
 
-from .datasets import FewShotDataSet
+from datasets import FewShotDataSet
 from torchvision import transforms
 from PIL import Image
 from tqdm import tqdm
@@ -10,7 +11,7 @@ from tqdm import tqdm
 
 
 class TrafficSignDataset(FewShotDataSet):
-    def __init__(self, root_dir, exclude_class):
+    def __init__(self, root_dir, exclude_class, transform):
         super(TrafficSignDataset, self).__init__()
         """
         Args:
@@ -22,28 +23,29 @@ class TrafficSignDataset(FewShotDataSet):
 
         self.data = []
         self.labels = []
-        self.class_dir = {}
-
+        self.labels_str = []
+        
         c_idx = 0
+
         for i, c in tqdm(enumerate(os.listdir(root_dir))):
             if i not in exclude_class:
-                list_of_datapoints = os.listdir(root_dir+"/"+c)
-
+                list_of_datapoints = os.listdir(root_dir + "/" + c)
+                list_of_datapoints = [root_dir + "/" + c + "/" + s for s in list_of_datapoints]
+                
                 self.data += list_of_datapoints
                 self.labels += [c_idx]*len(list_of_datapoints)
-                self.class_dir[c_idx] = root_dir + "/" + c
+                self.labels_str.append(c)
                 
                 c_idx += 1
 
         self._classes = torch.tensor(self.labels).unique()
 
-        self.transform = transforms.Compose([
-                                            transforms.Resize(256),
-                                            transforms.RandomCrop(224),
-                                            transforms.ToTensor(),
-                                            transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                                                 std=[0.229, 0.224, 0.225])
-                                           ])
+        self.transform = transform
+
+
+    def __len__(self):
+        return len(self.labels)
+
 
     def get_index_in_class(self, class_idx):
         """
@@ -63,9 +65,11 @@ class TrafficSignDataset(FewShotDataSet):
 
         return torch.arange(start, end)
 
+
     def __getitem__(self, idx):
         y = self.labels[idx]
-        url = self.class_dir[y] + "/" + self.data[idx]
+        
+        url = self.data[idx]
         
         x = Image.open(url)
         x = self.transform(x)
@@ -79,23 +83,40 @@ class TrafficSignDataset(FewShotDataSet):
     def __len__(self):
         return len(self.labels)
 
-    def __len__(self):
-        return len(self.labels)
+    def get_all_support_set(self, k):
+        batch = []
+        
+        for c in range(self._classes):
+            indices = self.get_index_in_class(c)
+            samples = random.sample(k, indices)
+            
+            for i in samples:
+                x = self.__get_item(i)["img"]
+                batch.append(x)
 
-    def add_datapoint(self, file_name, c_idx):
+        return torch.tensor(batch)
+
+    
+    def add_datapoint(self, file_name, class_):
+
         """
         Method for adding a single data point to the dataset.
 
         # Args:
             file_name : String. Name of file that should be added to dataset.
-            c_idx : int. Class index of which the file belongs to.
+            c_idx : str. Name of class data point belongs to
 
         """
 
-        try:
-            i = self.labels.index(c_idx)
-        except:
+        if class_ in self.labels_str:
+            c_idx = self.labels_str.index(class_) # Get class index
+            i = self.labels.index(c_idx) # Find first position of the class
+
+        else:
             i = len(self.labels)
+            c_idx = len(self.labels_str)
+            
+            self.labels_str.append(class_)
             
         self.data.insert(i, file_name)
         self.labels.insert(i, c_idx)
@@ -113,8 +134,12 @@ class TrafficSignDataset(FewShotDataSet):
         """
 
         i = self.data.index(file_name)
+        label = self.labels[i]
 
         del self.data[i]
         del self.labels[i]
+
+        if label not in self.labels:
+            del self.labels_str[label] 
 
         self._classes = torch.tensor(self.labels).unique()
