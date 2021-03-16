@@ -3,6 +3,7 @@ import torch.nn as nn
 from typing import List, Tuple, Any
 import torch.nn.functional as F
 from .utils_train import ModuleAdaptater
+from torchvision.models import resnet18 
 
 
 def get_conv_block_mp(
@@ -67,6 +68,43 @@ class BasicEmbeddingModule(nn.Module):
         x = self.conv_blocks(x)
 
         return x
+
+
+
+
+class ResNetEmbeddingModule(nn.Module):
+    """
+    Embedding module with a ResNet Backbone. Work only with three channel, 224x224 img normalize. Work only with three channel, 224x224 img normalized
+    """
+    def __init__(self, out_channels: int, pretrained: bool = False):
+        super().__init__()
+
+        self.backbone = resnet18(pretrained=pretrained)   
+        self.backbone.fc = nn.Identity()
+        self.backbone.avgpool = nn.Identity()
+
+    def forward(self,x):
+        x = self.backbone.conv1(x)
+        x = self.backbone.bn1(x)
+        x = self.backbone.relu(x)
+        x = self.backbone.maxpool(x)
+
+        x = self.backbone.layer1(x)
+        x = self.backbone.layer2(x)
+        x = self.backbone.layer3(x)
+        x = self.backbone.layer4(x)
+        
+
+        return x 
+
+    def freeze_backbone(self,freeze=True):
+       
+        for p in embedding_resnet_module.parameters():
+            p.requires_grad = freeze
+
+        if freeze:
+            for p in embedding_resnet_module.layer4.parameters():
+                p.requires_grad = True
 
 
 class BasicRelationModule(nn.Module):

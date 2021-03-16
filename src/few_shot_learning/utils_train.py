@@ -4,7 +4,8 @@ import torch.nn as nn
 import torchvision.transforms.functional as TF
 from tqdm import tqdm
 import random
-
+import copy
+from typing import Tuple
 
 class RotationTransform:
     """Rotate by one of the given angles."""
@@ -24,14 +25,21 @@ class ModuleAdaptater:
     """
 
     def __init__(self, model: nn.Module):
-        self._model = model
+        self.model = model
 
     def get_loss_and_accuracy(self, inputs, labels, accuracy=False):
         raise NotImplementedError
 
-    @property
-    def model(self):
-        return self._model
+
+def get_n_trainable_param(model: nn.Module) -> Tuple[int,int]:
+    """
+    return the number of trainable parameters of a model
+    
+    return :
+        Tuple ( mumber of trainable params, number of parameters)
+    """
+    L = torch.Tensor([p.requires_grad for p in model.parameters()])
+    return len(L[L==True]),len(list(model.parameters()))
 
 
 class TrainerFewShot:
@@ -39,11 +47,21 @@ class TrainerFewShot:
         self,
         model_adaptater: ModuleAdaptater,
         device: torch.device,
+        checkpoint: bool = False
     ):
         super().__init__()
 
         self.model_adaptater = model_adaptater
         self.device = device
+
+        self.checkpoint = checkpoint
+        
+        if not(self.checkpoint):
+            self.model_checkpoint : nn.Module = self.model_adaptater.model
+        else:
+            self.model_checkpoint : nn.Module = self.model_adaptater.model # temporaly fix deep copy after the init of the lazy linear
+
+        self.best_accuracy : Tuple[int,float] = (0,0) 
 
         self.list_loss = []
         self.list_loss_eval = []
@@ -52,7 +70,6 @@ class TrainerFewShot:
     def train_model(self, inputs, labels, optim: torch.optim):
 
         self.model_adaptater.model.zero_grad()
-
         loss, _ = self.model_adaptater.get_loss_and_accuracy(inputs, labels)
 
         loss.backward()
@@ -118,6 +135,10 @@ class TrainerFewShot:
 
                     accuracy = accuracy / len(eval_taskloader)
                     self.accuracy_eval.append(accuracy.item())
+                        
+                    if self.checkpoint and accuracy.item() > self.best_accuracy[1]:
+                        self.model_checkpoint = copy.deepcopy(self.model_adaptater.model)
+                        self.best_accuracy = (epoch,accuracy.item())
 
                     self.list_loss_eval.append(
                         sum(list_loss_batch_eval) / len(list_loss_batch_eval)
@@ -129,6 +150,7 @@ class TrainerFewShot:
                 )
 
     def accuracy(self, accuracy_taskloader: torch.utils.data.DataLoader):
+
 
         accuracy = 0
 
@@ -146,3 +168,8 @@ class TrainerFewShot:
                 accuracy += accuracy_batch
 
         return accuracy / len(accuracy_taskloader)
+   
+
+    def restore_checkpoint(self):
+
+        self.model_adaptater.model = self.model_checkpoint 

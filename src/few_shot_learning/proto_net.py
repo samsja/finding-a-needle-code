@@ -3,7 +3,10 @@ import torch.nn.functional as F
 import torch
 
 from torchvision.models import resnet18
+<<<<<<< HEAD
+=======
 from .utils_train import ModuleAdaptater
+>>>>>>> master
 
 
 class ProtoNet(torch.nn.Module):
@@ -105,3 +108,4 @@ class ProtoNetAdaptater(ModuleAdaptater):
             accuracy = correct/total
 
         return loss, accuracy
+

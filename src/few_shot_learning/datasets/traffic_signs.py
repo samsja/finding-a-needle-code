@@ -3,7 +3,7 @@ import random
 import torch
 import os
 
-from datasets import FewShotDataSet
+from .datasets import FewShotDataSet
 from torchvision import transforms
 from PIL import Image
 from tqdm import tqdm
@@ -139,7 +139,5 @@ class TrafficSignDataset(FewShotDataSet):
         del self.data[i]
         del self.labels[i]
 
-        if label not in self.labels:
-            del self.labels_str[label] 
 
         self._classes = torch.tensor(self.labels).unique()
