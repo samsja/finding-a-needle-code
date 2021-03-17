@@ -154,7 +154,7 @@ class TrainerFewShot:
 
         accuracy = 0
 
-        for batch_idx, batch in enumerate(accuracy_taskloader):
+        for batch_idx, batch in enumerate(tqdm(accuracy_taskloader)):
 
             with torch.no_grad():
                 self.model_adaptater.model.eval()
