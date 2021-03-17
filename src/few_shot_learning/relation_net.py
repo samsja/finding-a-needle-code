@@ -99,14 +99,17 @@ class ResNetEmbeddingModule(nn.Module):
 
     def freeze_backbone(self,freeze=True):
        
-        for p in embedding_resnet_module.parameters():
-            p.requires_grad = freeze
+        for p in self.backbone.parameters():
+            p.requires_grad = not(freeze)
 
         if freeze:
-            for p in embedding_resnet_module.layer4.parameters():
+            for p in self.backbone.layer4.parameters():
                 p.requires_grad = True
 
 
+    def unfreeze_backbone(self):
+        self.freeze_backbone(freeze=False)
+        
 class BasicRelationModule(nn.Module):
     def __init__(
         self, input_size: int, hidden_size: int = 8, linear_size: int = None, lazy=False
@@ -120,7 +123,7 @@ class BasicRelationModule(nn.Module):
             Lazy : bool. if True will iniliate a Lazy Layer for the first linear
         """
 
-        super(BasicRelationModule, self).__init__()
+        super().__init__()
 
         self.conv1 = get_conv_block_mp(input_size * 2, input_size, padding=1)
 
@@ -320,7 +323,7 @@ class RelationNetAdaptater(ModuleAdaptater):
         q: int,
         device: torch.device,
     ):
-        super(RelationNetAdaptater, self).__init__(model)
+        super().__init__(model)
         self.nb_ep = nb_ep
         self.n = n
         self.k = k
