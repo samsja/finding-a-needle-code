@@ -9,6 +9,17 @@ from PIL import Image
 from tqdm import tqdm
 
 
+def get_file_name_from_folder(root_dir,exclude_class):
+
+
+    list_of_datapoints = []
+    for i, c in tqdm(enumerate(os.listdir(root_dir))):
+        if i not in exclude_class:
+            list_of_datapoints_in_folder = os.listdir(root_dir + "/" + c)
+            list_of_datapoints += [root_dir + "/" + c + "/" + s for s in list_of_datapoints_in_folder]
+
+    return list_of_datapoints 
+
 
 class TrafficSignDataset(FewShotDataSet):
     def __init__(self, file_names, transform):
@@ -26,7 +37,7 @@ class TrafficSignDataset(FewShotDataSet):
         for fn in tqdm(file_names):
             self.data.append(fn)
 
-            label = fn.split("/")[3]
+            label = fn.split("/")[-2]
 
             if label not in self.labels_str:
                 self.labels_str.append(label)
