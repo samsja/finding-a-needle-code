@@ -5,7 +5,8 @@ import torchvision.transforms.functional as TF
 from tqdm import tqdm
 import random
 import copy
-from typing import Tuple
+from typing import Iterator, Tuple
+
 
 class RotationTransform:
     """Rotate by one of the given angles."""
@@ -31,15 +32,15 @@ class ModuleAdaptater:
         raise NotImplementedError
 
 
-def get_n_trainable_param(model: nn.Module) -> Tuple[int,int]:
+def get_n_trainable_param(model: nn.Module) -> Tuple[int, int]:
     """
     return the number of trainable parameters of a model
-    
+
     return :
         Tuple ( mumber of trainable params, number of parameters)
     """
     L = torch.Tensor([p.requires_grad for p in model.parameters()])
-    return len(L[L==True]),len(list(model.parameters()))
+    return len(L[L == True]), len(list(model.parameters()))
 
 
 class TrainerFewShot:
@@ -47,7 +48,7 @@ class TrainerFewShot:
         self,
         model_adaptater: ModuleAdaptater,
         device: torch.device,
-        checkpoint: bool = False
+        checkpoint: bool = False,
     ):
         super().__init__()
 
@@ -55,13 +56,15 @@ class TrainerFewShot:
         self.device = device
 
         self.checkpoint = checkpoint
-        
-        if not(self.checkpoint):
-            self.model_checkpoint : nn.Module = self.model_adaptater.model
-        else:
-            self.model_checkpoint : nn.Module = self.model_adaptater.model # temporaly fix deep copy after the init of the lazy linear
 
-        self.best_accuracy : Tuple[int,float] = (0,0) 
+        if not (self.checkpoint):
+            self.model_checkpoint: nn.Module = self.model_adaptater.model
+        else:
+            self.model_checkpoint: nn.Module = (
+                self.model_adaptater.model
+            )  # temporaly fix deep copy after the init of the lazy linear
+
+        self.best_accuracy: Tuple[int, float] = (0, 0)
 
         self.list_loss = []
         self.list_loss_eval = []
@@ -135,10 +138,12 @@ class TrainerFewShot:
 
                     accuracy = accuracy / len(eval_taskloader)
                     self.accuracy_eval.append(accuracy.item())
-                        
+
                     if self.checkpoint and accuracy.item() > self.best_accuracy[1]:
-                        self.model_checkpoint = copy.deepcopy(self.model_adaptater.model)
-                        self.best_accuracy = (epoch,accuracy.item())
+                        self.model_checkpoint = copy.deepcopy(
+                            self.model_adaptater.model
+                        )
+                        self.best_accuracy = (epoch, accuracy.item())
 
                     self.list_loss_eval.append(
                         sum(list_loss_batch_eval) / len(list_loss_batch_eval)
@@ -150,7 +155,6 @@ class TrainerFewShot:
                 )
 
     def accuracy(self, accuracy_taskloader: torch.utils.data.DataLoader):
-
 
         accuracy = 0
 
@@ -168,8 +172,85 @@ class TrainerFewShot:
                 accuracy += accuracy_batch
 
         return accuracy / len(accuracy_taskloader)
-   
 
     def restore_checkpoint(self):
 
-        self.model_adaptater.model = self.model_checkpoint 
+        self.model_adaptater.model = self.model_checkpoint
+
+
+def get_miss_match_few_shot(
+    model_adaptater: ModuleAdaptater, accuracy_taskloader: torch.utils.data.DataLoader
+) -> Iterator[Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor,torch.Tensor,torch.Tensor]]:
+    """
+    this function help to find example where the model make a wrong guess
+
+    #return:
+        iterator compose of tuple (miss match queries images, miss match queries output label, miss match queries true label,support set images,relation value output, relation value true target )
+
+    """
+    if model_adaptater.nb_ep != 1:
+        raise NotImplementedError
+
+    for batch_idx, batch in enumerate(accuracy_taskloader):
+
+        with torch.no_grad():
+            model_adaptater.model.eval()
+
+            inputs, _ = batch
+
+            # mis_inputs,mis_class,true_class,support_inputs = model_adaptater.get_mismatch_inputs(inputs)
+
+        yield model_adaptater.get_mismatch_inputs(inputs)
+
+
+import matplotlib.pyplot as plt
+ 
+def plot_miss_match(miss_match_tuple,img_from_tensor= lambda x:x,figsize=(7,7)):
+    """
+    plot support and missmatch queries
+    """
+
+    (miss_inputs,miss_class,true_class,support_inputs,r_output,r_true_label) = miss_match_tuple
+
+    if support_inputs.size(0) != 1:
+        raise NotImplementedError
+
+    max_miss_class = torch.bincount(miss_class).max().item() if miss_class.size(0) > 0 else 0
+        
+    fig = plt.figure(constrained_layout=True)
+    
+    fig1, ax1 = plt.subplots(
+                           nrows=support_inputs.size(1), 
+                           ncols=support_inputs.size(2)+ max_miss_class,
+                           constrained_layout=True,
+                           figsize=figsize
+               )
+
+    for i,img_class in enumerate(support_inputs[0]):
+        for j,img in enumerate(img_class):
+            ax1[i,j].axis('off')
+            ax1[i,j].imshow(img_from_tensor(img))
+    
+    for i in range(ax1.shape[0]):
+        for j in range(ax1.shape[1]):
+            ax1[i,j].axis('off')
+
+    
+    
+    list_available = {i: 0 for i in range(support_inputs.size(1))}
+    
+    for j,img in enumerate(miss_inputs):
+        
+        row = int(miss_class[j])
+                        
+        col = support_inputs.size(2) + list_available[row] 
+                        
+        ax1[row,col].axis('off')
+        ax1[row,col].imshow(img_from_tensor(img))
+        
+        ro = float("{:.2f}".format(r_output[j]))
+        rt = float("{:.2f}".format(r_true_label[j]))
+
+        ax1[row,col].set_title(f"{miss_class[j]} {true_class[j]} \n {ro} {rt}")
+
+        list_available[row] += 1
