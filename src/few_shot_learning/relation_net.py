@@ -3,7 +3,7 @@ import torch.nn as nn
 from typing import List, Tuple, Any
 import torch.nn.functional as F
 from .utils_train import ModuleAdaptater
-from torchvision.models import resnet18 
+from torchvision.models import resnet18
 
 
 def get_conv_block_mp(
@@ -70,20 +70,19 @@ class BasicEmbeddingModule(nn.Module):
         return x
 
 
-
-
 class ResNetEmbeddingModule(nn.Module):
     """
     Embedding module with a ResNet Backbone. Work only with three channel, 224x224 img normalize. Work only with three channel, 224x224 img normalized
     """
+
     def __init__(self, out_channels: int, pretrained: bool = False):
         super().__init__()
 
-        self.backbone = resnet18(pretrained=pretrained)   
+        self.backbone = resnet18(pretrained=pretrained)
         self.backbone.fc = nn.Identity()
         self.backbone.avgpool = nn.Identity()
 
-    def forward(self,x):
+    def forward(self, x):
         x = self.backbone.conv1(x)
         x = self.backbone.bn1(x)
         x = self.backbone.relu(x)
@@ -93,23 +92,22 @@ class ResNetEmbeddingModule(nn.Module):
         x = self.backbone.layer2(x)
         x = self.backbone.layer3(x)
         x = self.backbone.layer4(x)
-        
 
-        return x 
+        return x
 
-    def freeze_backbone(self,freeze=True):
-       
+    def freeze_backbone(self, freeze=True):
+
         for p in self.backbone.parameters():
-            p.requires_grad = not(freeze)
+            p.requires_grad = not (freeze)
 
         if freeze:
             for p in self.backbone.layer4.parameters():
                 p.requires_grad = True
 
-
     def unfreeze_backbone(self):
         self.freeze_backbone(freeze=False)
-        
+
+
 class BasicRelationModule(nn.Module):
     def __init__(
         self, input_size: int, hidden_size: int = 8, linear_size: int = None, lazy=False
@@ -331,19 +329,80 @@ class RelationNetAdaptater(ModuleAdaptater):
         self.device = device
         self.loss_func = loss_func
 
-    def get_loss_and_accuracy(self, inputs, labels, accuracy=False):
-        outputs = self.model(inputs.to(self.device), self.nb_ep, self.n, self.k, self.q)
-
-        targets = (
+        self.targets = (
             torch.eye(self.k, device=self.device)
             .unsqueeze(0)
             .unsqueeze(-1)
             .expand(self.nb_ep, self.k, self.k, self.q)
         )
 
-        loss = self.loss_func(outputs, targets)
+    def get_loss_and_accuracy(self, inputs, labels, accuracy=False):
+        outputs = self.model(inputs.to(self.device), self.nb_ep, self.n, self.k, self.q)
+
+        loss = self.loss_func(outputs, self.targets)
 
         if accuracy:
-            accuracy = (outputs.argmax(dim=1) == targets.argmax(dim=1)).float().mean()
+            accuracy = (
+                (outputs.argmax(dim=1) == self.targets.argmax(dim=1)).float().mean()
+            )
 
         return loss, accuracy
+
+
+    def get_mismatch_inputs(
+        self, inputs
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor,torch.Tensor]:
+
+        """
+        #Return
+         tuple (miss match queries images, miss match queries output label, miss match queries true label,support set images,relation value output, relation value true target )
+
+        """
+  
+        targets = self.targets.argmax(dim=1)
+
+        relation_outputs = self.model(inputs.to(self.device), self.nb_ep, self.n, self.k, self.q)
+
+
+        relation_outputs_max,outputs  = relation_outputs.max(dim=1)
+
+        inputs = inputs.view(self.nb_ep, self.k, self.n + self.q, *inputs.shape[-3:])
+
+        inputs_support = inputs[:, :, : self.n ]
+        inputs_queries = inputs[:, :, -self.q:]
+
+
+        mask_mismatch_index = outputs != targets
+       
+
+
+        # ugly fix to do relation_outputs[targets] see : https://discuss.pytorch.org/t/use-argmax-as-index-for-a-new-array/115224
+        
+        def get_relation_true_label(relation_outputs,argmax):
+
+            relation_true_label = torch.zeros((1,*relation_outputs.shape[-2:]))
+
+            for i in range(argmax.shape[1]):
+                for j in range(argmax.shape[2]):
+
+                    relation_true_label[:,i,j] = relation_outputs[0,argmax[0,i,j],i,j]
+
+            return relation_true_label
+
+
+
+        relation_true_label = get_relation_true_label(relation_outputs,targets)
+        # end ugly fix
+
+        assert relation_outputs_max[mask_mismatch_index].shape == relation_true_label[mask_mismatch_index].shape
+
+        assert outputs[mask_mismatch_index].shape == targets[mask_mismatch_index].shape
+
+        return (
+            inputs_queries[mask_mismatch_index],
+            outputs[mask_mismatch_index],
+            targets[mask_mismatch_index],
+            inputs_support,
+            relation_outputs_max[mask_mismatch_index],
+            relation_true_label[mask_mismatch_index]
+        )
