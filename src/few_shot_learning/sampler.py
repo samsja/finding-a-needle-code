@@ -63,7 +63,11 @@ class FewShotSampler(torch.utils.data.Sampler):
             for episode in range(self.episodes):
 
                 classes_for_ep: torch.Tensor[torch.int] = self.dataset.classes[
-                    torch.randint(0, len(self.dataset.classes), (self.classes_per_ep,))
+                    torch.multinomial(
+                        torch.ones(len(self.dataset.classes)),
+                        num_samples=self.classes_per_ep,
+                        replacement=False,
+                    )
                 ]
 
                 for i, c in enumerate(classes_for_ep):
