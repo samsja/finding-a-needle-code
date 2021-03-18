@@ -11,32 +11,28 @@ from tqdm import tqdm
 
 
 class TrafficSignDataset(FewShotDataSet):
-    def __init__(self, root_dir, exclude_class, transform):
+    def __init__(self, file_names, transform):
         super(TrafficSignDataset, self).__init__()
         """
         Args:
-            root_dir : string. Directory with all the folders.
-            exclude_class : list. List containing indices of which classes 
-                                  to exclude from the training set.
+            file_names : list. List containg file names of all images that should be added.
 
         """
 
         self.data = []
         self.labels = []
         self.labels_str = []
-        
-        c_idx = 0
 
-        for i, c in tqdm(enumerate(os.listdir(root_dir))):
-            if i not in exclude_class:
-                list_of_datapoints = os.listdir(root_dir + "/" + c)
-                list_of_datapoints = [root_dir + "/" + c + "/" + s for s in list_of_datapoints]
+        for fn in tqdm(file_names):
+            self.data.append(fn)
+
+            label = fn.split("/")[3]
+
+            if label not in self.labels_str:
+                self.labels_str.append(label)
+
+            self.labels.append(self.labels_str.index(label))
                 
-                self.data += list_of_datapoints
-                self.labels += [c_idx]*len(list_of_datapoints)
-                self.labels_str.append(c)
-                
-                c_idx += 1
 
         self._classes = torch.tensor(self.labels).unique()
 
@@ -80,8 +76,19 @@ class TrafficSignDataset(FewShotDataSet):
         
         return data
 
-    def __len__(self):
-        return len(self.labels)
+    def get_support(self, n, k):
+        indices = self.get_index_in_class(k)
+        
+        samples = random.sample(n, indices)
+
+        batch = []
+        
+        for i in samples:
+            x = self.__get_item(i)["img"]
+            batch.append(x)
+
+        return torch.tensor(batch)
+
 
     def get_all_support_set(self, k):
         batch = []
