@@ -180,7 +180,16 @@ class TrainerFewShot:
 
 def get_miss_match_few_shot(
     model_adaptater: ModuleAdaptater, accuracy_taskloader: torch.utils.data.DataLoader
-) -> Iterator[Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor,torch.Tensor,torch.Tensor]]:
+) -> Iterator[
+    Tuple[
+        torch.Tensor,
+        torch.Tensor,
+        torch.Tensor,
+        torch.Tensor,
+        torch.Tensor,
+        torch.Tensor,
+    ]
+]:
     """
     this function help to find example where the model make a wrong guess
 
@@ -204,53 +213,61 @@ def get_miss_match_few_shot(
 
 
 import matplotlib.pyplot as plt
- 
-def plot_miss_match(miss_match_tuple,img_from_tensor= lambda x:x,figsize=(7,7)):
+
+
+def plot_miss_match(miss_match_tuple, img_from_tensor=lambda x: x, figsize=(7, 7)):
     """
     plot support and missmatch queries
     """
 
-    (miss_inputs,miss_class,true_class,support_inputs,r_output,r_true_label) = miss_match_tuple
+    (
+        miss_inputs,
+        miss_class,
+        true_class,
+        support_inputs,
+        r_output,
+        r_true_label,
+    ) = miss_match_tuple
 
     if support_inputs.size(0) != 1:
         raise NotImplementedError
 
-    max_miss_class = torch.bincount(miss_class).max().item() if miss_class.size(0) > 0 else 0
-        
-    fig = plt.figure(constrained_layout=True)
-    
-    fig1, ax1 = plt.subplots(
-                           nrows=support_inputs.size(1), 
-                           ncols=support_inputs.size(2)+ max_miss_class,
-                           constrained_layout=True,
-                           figsize=figsize
-               )
+    max_miss_class = (
+        torch.bincount(miss_class).max().item() if miss_class.size(0) > 0 else 0
+    )
 
-    for i,img_class in enumerate(support_inputs[0]):
-        for j,img in enumerate(img_class):
-            ax1[i,j].axis('off')
-            ax1[i,j].imshow(img_from_tensor(img))
-    
+    fig = plt.figure(constrained_layout=True)
+
+    fig1, ax1 = plt.subplots(
+        nrows=support_inputs.size(1),
+        ncols=support_inputs.size(2) + max_miss_class,
+        constrained_layout=True,
+        figsize=figsize,
+    )
+
+    for i, img_class in enumerate(support_inputs[0]):
+        for j, img in enumerate(img_class):
+            ax1[i, j].axis("off")
+            ax1[i, j].imshow(img_from_tensor(img))
+
     for i in range(ax1.shape[0]):
         for j in range(ax1.shape[1]):
-            ax1[i,j].axis('off')
+            ax1[i, j].axis("off")
 
-    
-    
     list_available = {i: 0 for i in range(support_inputs.size(1))}
-    
-    for j,img in enumerate(miss_inputs):
-        
+
+    for j, img in enumerate(miss_inputs):
+
         row = int(miss_class[j])
-                        
-        col = support_inputs.size(2) + list_available[row] 
-                        
-        ax1[row,col].axis('off')
-        ax1[row,col].imshow(img_from_tensor(img))
-        
+
+        col = support_inputs.size(2) + list_available[row]
+
+        ax1[row, col].axis("off")
+        ax1[row, col].imshow(img_from_tensor(img))
+
         ro = float("{:.2f}".format(r_output[j]))
         rt = float("{:.2f}".format(r_true_label[j]))
 
-        ax1[row,col].set_title(f"{miss_class[j]} {true_class[j]} \n {ro} {rt}")
+        ax1[row, col].set_title(f"{miss_class[j]} {true_class[j]} \n {ro} {rt}")
 
         list_available[row] += 1
