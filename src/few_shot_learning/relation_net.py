@@ -348,53 +348,53 @@ class RelationNetAdaptater(ModuleAdaptater):
 
         return loss, accuracy
 
-
     def get_mismatch_inputs(
         self, inputs
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor,torch.Tensor]:
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
 
         """
         #Return
          tuple (miss match queries images, miss match queries output label, miss match queries true label,support set images,relation value output, relation value true target )
 
         """
-  
+
         targets = self.targets.argmax(dim=1)
 
-        relation_outputs = self.model(inputs.to(self.device), self.nb_ep, self.n, self.k, self.q)
+        relation_outputs = self.model(
+            inputs.to(self.device), self.nb_ep, self.n, self.k, self.q
+        )
 
-
-        relation_outputs_max,outputs  = relation_outputs.max(dim=1)
+        relation_outputs_max, outputs = relation_outputs.max(dim=1)
 
         inputs = inputs.view(self.nb_ep, self.k, self.n + self.q, *inputs.shape[-3:])
 
-        inputs_support = inputs[:, :, : self.n ]
-        inputs_queries = inputs[:, :, -self.q:]
-
+        inputs_support = inputs[:, :, : self.n]
+        inputs_queries = inputs[:, :, -self.q :]
 
         mask_mismatch_index = outputs != targets
-       
-
 
         # ugly fix to do relation_outputs[targets] see : https://discuss.pytorch.org/t/use-argmax-as-index-for-a-new-array/115224
-        
-        def get_relation_true_label(relation_outputs,argmax):
 
-            relation_true_label = torch.zeros((1,*relation_outputs.shape[-2:]))
+        def get_relation_true_label(relation_outputs, argmax):
+
+            relation_true_label = torch.zeros((1, *relation_outputs.shape[-2:]))
 
             for i in range(argmax.shape[1]):
                 for j in range(argmax.shape[2]):
 
-                    relation_true_label[:,i,j] = relation_outputs[0,argmax[0,i,j],i,j]
+                    relation_true_label[:, i, j] = relation_outputs[
+                        0, argmax[0, i, j], i, j
+                    ]
 
             return relation_true_label
 
-
-
-        relation_true_label = get_relation_true_label(relation_outputs,targets)
+        relation_true_label = get_relation_true_label(relation_outputs, targets)
         # end ugly fix
 
-        assert relation_outputs_max[mask_mismatch_index].shape == relation_true_label[mask_mismatch_index].shape
+        assert (
+            relation_outputs_max[mask_mismatch_index].shape
+            == relation_true_label[mask_mismatch_index].shape
+        )
 
         assert outputs[mask_mismatch_index].shape == targets[mask_mismatch_index].shape
 
@@ -404,5 +404,5 @@ class RelationNetAdaptater(ModuleAdaptater):
             targets[mask_mismatch_index],
             inputs_support,
             relation_outputs_max[mask_mismatch_index],
-            relation_true_label[mask_mismatch_index]
+            relation_true_label[mask_mismatch_index],
         )

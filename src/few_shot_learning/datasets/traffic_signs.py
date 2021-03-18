@@ -9,16 +9,17 @@ from PIL import Image
 from tqdm import tqdm
 
 
-def get_file_name_from_folder(root_dir,exclude_class):
-
+def get_file_name_from_folder(root_dir, exclude_class):
 
     list_of_datapoints = []
     for i, c in tqdm(enumerate(os.listdir(root_dir))):
         if i not in exclude_class:
             list_of_datapoints_in_folder = os.listdir(root_dir + "/" + c)
-            list_of_datapoints += [root_dir + "/" + c + "/" + s for s in list_of_datapoints_in_folder]
+            list_of_datapoints += [
+                root_dir + "/" + c + "/" + s for s in list_of_datapoints_in_folder
+            ]
 
-    return list_of_datapoints 
+    return list_of_datapoints
 
 
 class TrafficSignDataset(FewShotDataSet):
@@ -43,16 +44,13 @@ class TrafficSignDataset(FewShotDataSet):
                 self.labels_str.append(label)
 
             self.labels.append(self.labels_str.index(label))
-                
 
         self._classes = torch.tensor(self.labels).unique()
 
         self.transform = transform
 
-
     def __len__(self):
         return len(self.labels)
-
 
     def get_index_in_class(self, class_idx):
         """
@@ -66,55 +64,50 @@ class TrafficSignDataset(FewShotDataSet):
         start = self.labels.index(class_idx)
 
         try:
-            end = self.labels.index(class_idx+1)
+            end = self.labels.index(class_idx + 1)
         except:
             end = len(self.labels)
 
         return torch.arange(start, end)
 
-
     def __getitem__(self, idx):
         y = self.labels[idx]
-        
+
         url = self.data[idx]
-        
+
         x = Image.open(url)
         x = self.transform(x)
 
-        data = {"img" : x,
-                "label" : torch.tensor(y),
-                "file_name" : self.data[idx]}
-        
+        data = {"img": x, "label": torch.tensor(y), "file_name": self.data[idx]}
+
         return data
 
     def get_support(self, n, k):
         indices = self.get_index_in_class(k)
-        
+
         samples = random.sample(n, indices)
 
         batch = []
-        
+
         for i in samples:
             x = self.__get_item(i)["img"]
             batch.append(x)
 
         return torch.tensor(batch)
 
-
     def get_all_support_set(self, k):
         batch = []
-        
+
         for c in range(self._classes):
             indices = self.get_index_in_class(c)
             samples = random.sample(k, indices)
-            
+
             for i in samples:
                 x = self.__get_item(i)["img"]
                 batch.append(x)
 
         return torch.tensor(batch)
 
-    
     def add_datapoint(self, file_name, class_):
 
         """
@@ -127,20 +120,19 @@ class TrafficSignDataset(FewShotDataSet):
         """
 
         if class_ in self.labels_str:
-            c_idx = self.labels_str.index(class_) # Get class index
-            i = self.labels.index(c_idx) # Find first position of the class
+            c_idx = self.labels_str.index(class_)  # Get class index
+            i = self.labels.index(c_idx)  # Find first position of the class
 
         else:
             i = len(self.labels)
             c_idx = len(self.labels_str)
-            
+
             self.labels_str.append(class_)
-            
+
         self.data.insert(i, file_name)
         self.labels.insert(i, c_idx)
 
         self._classes = torch.tensor(self.labels).unique()
-
 
     def remove_datapoint(self, file_name):
         """
@@ -156,6 +148,5 @@ class TrafficSignDataset(FewShotDataSet):
 
         del self.data[i]
         del self.labels[i]
-
 
         self._classes = torch.tensor(self.labels).unique()
