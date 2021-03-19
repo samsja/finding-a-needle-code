@@ -373,22 +373,7 @@ class RelationNetAdaptater(ModuleAdaptater):
 
         mask_mismatch_index = outputs != targets
 
-        # ugly fix to do relation_outputs[targets] see : https://discuss.pytorch.org/t/use-argmax-as-index-for-a-new-array/115224
-
-        def get_relation_true_label(relation_outputs, argmax):
-
-            relation_true_label = torch.zeros((1, *relation_outputs.shape[-2:]))
-
-            for i in range(argmax.shape[1]):
-                for j in range(argmax.shape[2]):
-
-                    relation_true_label[:, i, j] = relation_outputs[
-                        0, argmax[0, i, j], i, j
-                    ]
-
-            return relation_true_label
-
-        relation_true_label = get_relation_true_label(relation_outputs, targets)
+        relation_true_label = relation_outputs.gather(1,targets.unsqueeze(1))[:,0]
         # end ugly fix
 
         assert (
