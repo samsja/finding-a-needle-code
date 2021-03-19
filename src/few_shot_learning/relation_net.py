@@ -75,7 +75,7 @@ class ResNetEmbeddingModule(nn.Module):
     Embedding module with a ResNet Backbone. Work only with three channel, 224x224 img normalize. Work only with three channel, 224x224 img normalized
     """
 
-    def __init__(self, out_channels: int, pretrained: bool = False):
+    def __init__(self, pretrained: bool = False):
         super().__init__()
 
         self.backbone = resnet18(pretrained=pretrained)
@@ -327,7 +327,7 @@ class RelationNetAdaptater(ModuleAdaptater):
         self.k = k
         self.q = q
         self.device = device
-        self.loss_func = loss_func
+        self.loss_func = nn.MSELoss()
 
         self.targets = (
             torch.eye(self.k, device=self.device)
@@ -406,3 +406,23 @@ class RelationNetAdaptater(ModuleAdaptater):
             relation_outputs_max[mask_mismatch_index],
             relation_true_label[mask_mismatch_index],
         )
+
+
+
+
+def get_relation_net_adaptater(nb_ep,n,k,q,device):
+
+    model = RelationNet(in_channels=3,out_channels=64,
+                    embedding_module = ResNetEmbeddingModule(pretrained=True),
+                    relation_module=BasicRelationModule(input_size=512,linear_size=512),
+                    device=device,
+                    debug=True,
+                    merge_operator="mean")
+    model.to(device)
+
+    model.embedding.freeze_backbone()
+
+    model_adaptater = RelationNetAdaptater(model, None, nb_ep, n, k, q, device)
+
+    return model_adaptater,model
+

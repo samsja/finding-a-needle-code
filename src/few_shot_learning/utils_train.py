@@ -28,7 +28,7 @@ class ModuleAdaptater:
     def __init__(self, model: nn.Module):
         self.model = model
 
-    def get_loss_and_accuracy(self, inputs, labels, accuracy=False):
+    def get_loss_and_accuracy(self, inputs, labels, accuracy=False) -> Tuple[float,float]:
         raise NotImplementedError
 
 
@@ -49,6 +49,7 @@ class TrainerFewShot:
         model_adaptater: ModuleAdaptater,
         device: torch.device,
         checkpoint: bool = False,
+        clip_grad: bool =  True
     ):
         super().__init__()
 
@@ -70,6 +71,8 @@ class TrainerFewShot:
         self.list_loss_eval = []
         self.accuracy_eval = []
 
+        self.clip_grad = clip_grad
+
     def train_model(self, inputs, labels, optim: torch.optim):
 
         self.model_adaptater.model.zero_grad()
@@ -77,7 +80,8 @@ class TrainerFewShot:
 
         loss.backward()
 
-        torch.nn.utils.clip_grad_norm_(self.model_adaptater.model.parameters(), 0.5)
+        if self.clip_grad:
+            torch.nn.utils.clip_grad_norm_(self.model_adaptater.model.parameters(), 0.5)
 
         optim.step()
 
