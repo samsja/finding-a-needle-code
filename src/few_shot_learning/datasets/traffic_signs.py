@@ -49,8 +49,10 @@ class TrafficSignDataset(FewShotDataSet):
 
         self.transform = transform
 
+
     def __len__(self):
         return len(self.labels)
+
 
     def get_index_in_class(self, class_idx):
         """
@@ -78,9 +80,12 @@ class TrafficSignDataset(FewShotDataSet):
         x = Image.open(url)
         x = self.transform(x)
 
-        data = {"img": x, "label": torch.tensor(y), "file_name": self.data[idx]}
+        data = {"img": x, 
+                "label": torch.tensor(y), 
+                "id": torch.tensor(idx)}
 
         return data
+
 
     def get_support(self, n, k):
         indices = self.get_index_in_class(k)
@@ -115,7 +120,7 @@ class TrafficSignDataset(FewShotDataSet):
 
         # Args:
             file_name : String. Name of file that should be added to dataset.
-            c_idx : str. Name of class data point belongs to
+            c_idx : String. Name of class data point belongs to
 
         """
 
@@ -134,19 +139,17 @@ class TrafficSignDataset(FewShotDataSet):
 
         self._classes = torch.tensor(self.labels).unique()
 
-    def remove_datapoint(self, file_name):
+    def remove_datapoints(self, ids):
         """
         Method for removing single data point from dataset
 
         # Args:
-            file_name : String. Name of the file that should be removed.
+            ids : list. Indices of the data point to remove.
 
         """
 
-        i = self.data.index(file_name)
-        label = self.labels[i]
+        self.data = [i for  j, i in enumerate(self.data) if j not in ids]
 
-        del self.data[i]
-        del self.labels[i]
+        self.labels = [i for  j, i in enumerate(self.labels) if j not in ids]
 
         self._classes = torch.tensor(self.labels).unique()

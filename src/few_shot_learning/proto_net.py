@@ -80,44 +80,36 @@ class ProtoNetAdaptater(ModuleAdaptater):
     return ((center-features)**2).sum(dim=-1)
 
 
-    def loss_fn(self, centers, features, NB, Q, device):
-        """
-            Args:
-                centers : tensor. (NB, 512)
-                features : tensor. (NB, Q, 512)
-                NB : int. Number of different classes
-                Q : int. Number of queries per class
+    def loss_fn(self, centers, features):
+    """
+    Args:
+        centers : tensor. (NB, 512)
+        features : tensor. (NB, Q, 512)
 
-            Return:
-                loss : tensor. Total loss for batch
+    Return:
+        loss : tensor. Total loss for batch
 
-        """
+    """
 
-        # Calculate loss
-        mini_dist = 0
-        maxim_dist = 0
+    # Calculate loss
+    mini_dist = 0
+    maxim_dist = 0
 
-        for j, q in enumerate(features):
-            for f_ in q:
-                tmp = 0
-                for i, c_ in enumerate(centers):
-                    dist = ((c_-f_)**2).sum()
-                    dist = torch.clamp(dist, 0, 20)
-
-                    # The distance should be minimized if 
-                    # f_ is of same class as c_, i.e when i==j
-                    if i == j:
-                        mini_dist += dist.sum()
-                    else:
-                        tmp += torch.exp(-dist)
-                    
-                maxim_dist += torch.log(tmp)
-
-        loss = maxim_dist + mini_dist
-        loss /= Q*NB
+    for j, q in enumerate(features):
+        ind = list(range(centers.shape[0]))
+        del ind[j]
         
-        return loss
-
+        for f_ in q:
+            dists = get_dist(centers, f_)
+            
+            mini_dist += dists[j]
+            
+            tmp = torch.clamp(dists[ind], 0, 40)
+            tmp = torch.exp(-tmp).sum()
+            
+            maxim_dist += torch.log(tmp)
+            
+    return (maxim_dist + mini_dist) / (features.shape[0] * features.shape[1])
 
     def get_loss_and_accuracy(self, inputs, labels, accuracy=False):
 
@@ -136,7 +128,7 @@ class ProtoNetAdaptater(ModuleAdaptater):
         f = self.model(Q_) # (NB*Q, 512)
         f = f.view(self.n, self.q, 512)
 
-        loss = self.loss_fn(C, f, self.n, self.q)
+        loss = self.loss_fn(C, f)
 
         features = torch.swapaxes(f, 0,1)
 
@@ -154,3 +146,17 @@ class ProtoNetAdaptater(ModuleAdaptater):
 
         return loss, accuracy
 
+
+    def search(self, dl, support_vector):
+        l = []
+
+        for batch in dl:
+            output = self.model(batch["img"])
+
+            dists = self.get_dist(support_vector, output).tolist()
+
+
+            l += (batch["id"].tolist(), dists)
+
+        l.sort()
+        return l
