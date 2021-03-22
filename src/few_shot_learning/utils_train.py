@@ -49,7 +49,8 @@ class TrainerFewShot:
         model_adaptater: ModuleAdaptater,
         device: torch.device,
         checkpoint: bool = False,
-        clip_grad: bool =  True
+        clip_grad: bool =  True,
+       
     ):
         super().__init__()
 
@@ -73,6 +74,7 @@ class TrainerFewShot:
 
         self.clip_grad = clip_grad
 
+       
     def train_model(self, inputs, labels, optim: torch.optim):
 
         self.model_adaptater.model.zero_grad()
@@ -95,20 +97,28 @@ class TrainerFewShot:
         scheduler: torch.optim,
         bg_taskloader: torch.utils.data.DataLoader,
         eval_taskloader: torch.utils.data.DataLoader,
+        tqdm_on_batch = False,
     ):
         period_eval = max(epochs // nb_eval, 1)
 
-        for epoch in tqdm(range(epochs)):
+        if tqdm_on_batch:
+            enumerate2 = lambda x : enumerate(tqdm(x))
+            range2 =  lambda x : range(x)
+        else:
+            enumerate2 = lambda x : enumerate(x)
+            range2 = lambda x : tqdm(range(x))
+
+        for epoch in range2(epochs):
 
             list_loss_batch = []
 
             self.model_adaptater.model.train()
 
-            for batch_idx, batch in enumerate(bg_taskloader):
+            for batch_idx, batch in enumerate2(bg_taskloader):
 
                 inputs, labels = batch
 
-                loss = self.train_model(inputs, labels, optim)
+                loss = self.train_model(inputs.to(self.device), labels.to(self.device), optim)
 
                 list_loss_batch.append(loss.item())
 
@@ -132,8 +142,8 @@ class TrainerFewShot:
                             loss,
                             accuracy_batch,
                         ) = self.model_adaptater.get_loss_and_accuracy(
-                            inputs_eval,
-                            labels_eval,
+                            inputs_eval.to(self.device),
+                            labels_eval.to(self.device),
                             accuracy=True,
                         )
 
@@ -170,7 +180,7 @@ class TrainerFewShot:
                 inputs, labels = batch
 
                 _, accuracy_batch = self.model_adaptater.get_loss_and_accuracy(
-                    inputs, labels, accuracy=True
+                    inputs.to(self.device), labels.to(self.device), accuracy=True
                 )
 
                 accuracy += accuracy_batch
