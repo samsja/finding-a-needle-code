@@ -4,7 +4,7 @@ from typing import List, Tuple, Any
 import torch.nn.functional as F
 from .utils_train import ModuleAdaptater
 from torchvision.models import resnet18
-
+import copy
 
 def get_conv_block_mp(
     in_channels: int, out_channels: int, padding: int = 0
@@ -75,10 +75,15 @@ class ResNetEmbeddingModule(nn.Module):
     Embedding module with a ResNet Backbone. Work only with three channel, 224x224 img normalize. Work only with three channel, 224x224 img normalized
     """
 
-    def __init__(self, pretrained: bool = False):
+    def __init__(self,pretrained: bool = False, pretrained_backbone: nn.Module =  resnet18(pretrained=True)  ):
         super().__init__()
 
-        self.backbone = resnet18(pretrained=pretrained)
+        if pretrained:
+            self.backbone =  copy.deepcopy(resnet18(pretrained=False))
+            
+        else: 
+            self.backbone = resnet18(pretrained=False)
+        
         self.backbone.fc = nn.Identity()
         self.backbone.avgpool = nn.Identity()
 
