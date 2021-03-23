@@ -24,7 +24,7 @@ def get_file_name_from_folder(root_dir, exclude_class):
 
 class TrafficSignDataset(FewShotDataSet):
     def __init__(self, file_names, transform):
-        super(TrafficSignDataset, self).__init__()
+        super().__init__()
         """
         Args:
             file_names : list. List containg file names of all images that should be added.
@@ -35,7 +35,9 @@ class TrafficSignDataset(FewShotDataSet):
         self.labels = []
         self.labels_str = []
 
-        for fn in tqdm(file_names):
+        self.classes_indexes = {}
+
+        for index, fn in enumerate(tqdm(file_names)):
             self.data.append(fn)
 
             label = fn.split("/")[-2]
@@ -43,7 +45,17 @@ class TrafficSignDataset(FewShotDataSet):
             if label not in self.labels_str:
                 self.labels_str.append(label)
 
-            self.labels.append(self.labels_str.index(label))
+            label_idx = self.labels_str.index(label)
+
+            self.labels.append(label_idx)
+
+            if label_idx in self.classes_indexes.keys():
+                self.classes_indexes[label_idx].append(index)
+            else:
+                self.classes_indexes[label_idx] = [index]
+
+        for key in self.classes_indexes.keys():
+            self.classes_indexes[key] = torch.tensor(self.classes_indexes[key])
 
         self._classes = torch.tensor(self.labels).unique()
 
@@ -71,6 +83,28 @@ class TrafficSignDataset(FewShotDataSet):
             end = len(self.labels)
 
         return torch.arange(start, end)
+
+    def get_index_in_class_opt(self, class_idx):
+        """
+        Method to get the indexes of the elements in the same class as class_idx
+
+        # Args:
+            class_idx : int. The index of the desider class
+
+        """
+
+        return self.classes_indexes[class_idx]
+
+    def get_index_in_class_vect(self, class_idx_vect: torch.Tensor):
+        """
+        vectorized Method to get the indexes of the elements in the same class as class_idx
+
+        # Args:
+            class_idx : torch.Tensor[int]. The indexes of the desired classes
+
+        """
+
+        return _script_get_index_in_class_vect(class_idx_vect, self.classes_indexes)
 
     def __getitem__(self, idx):
         y = self.labels[idx]
@@ -153,3 +187,21 @@ class TrafficSignDataset(FewShotDataSet):
         self.labels = [i for  j, i in enumerate(self.labels) if j not in ids]
 
         self._classes = torch.tensor(self.labels).unique()
+
+
+from typing import Dict, List
+
+
+@torch.jit.script
+def _script_get_index_in_class_vect(
+    class_idx_vect: torch.Tensor, classes_indexes: Dict[int, torch.Tensor]
+):
+    """
+    vectorized Method to get the indexes of the elements in the same class as class_idx
+
+    # Args:
+        class_idx : torch.Tensor[int]. The indexes of the desired classes
+
+    """
+
+    return [classes_indexes[c.item()] for c in class_idx_vect]
