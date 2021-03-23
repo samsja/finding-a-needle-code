@@ -1,5 +1,5 @@
-from src.few_shot_learning import RelationNet,FewShotSampler
-from src.few_shot_learning.datasets import FewShotDataSet 
+from src.few_shot_learning import RelationNet, FewShotSampler, FewShotSampler2
+from src.few_shot_learning.datasets import FewShotDataSet
 
 import torch
 
@@ -7,15 +7,14 @@ import unittest
 
 
 class RandomFSDataSet(FewShotDataSet):
-    
     def __init__(self):
         super().__init__()
-        
+
         self._classes = torch.arange(10)
         self._length_of_class = 20
-    
-    def __getitm__(self,idx):
-        return ( torch.zeros((10,10)),0)
+
+    def __getitm__(self, idx):
+        return (torch.zeros((10, 10)), 0)
 
     def get_index_in_class(self, class_idx: int):
         """
@@ -31,6 +30,9 @@ class RandomFSDataSet(FewShotDataSet):
             dtype=torch.long,
         )
 
+    def get_index_in_class_vect(self, class_idx):
+
+        return [self.get_index_in_class(c.item()) for c in class_idx]
 
 
 class TestFewShotSampler(unittest.TestCase):
@@ -43,8 +45,9 @@ class TestFewShotSampler(unittest.TestCase):
         self.f_dim = 64
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    
+
         self.dataset = RandomFSDataSet()
+
         self.few_shot_sampler = FewShotSampler(
             self.dataset,
             number_of_batch=2,
@@ -55,4 +58,36 @@ class TestFewShotSampler(unittest.TestCase):
         )
 
     def test_output_shape(self):
-        assert next(iter(self.few_shot_sampler)).shape == (self.ep*self.k*(self.n+self.q),1) 
+        assert next(iter(self.few_shot_sampler)).shape == (
+            self.ep * self.k * (self.n + self.q),
+            1,
+        )
+
+
+class TestFewShotSampler2(unittest.TestCase):
+    def setUp(self):
+
+        self.ep = 10
+        self.n = 2
+        self.k = 5
+        self.q = 15
+        self.f_dim = 64
+
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+        self.dataset = RandomFSDataSet()
+
+        self.few_shot_sampler = FewShotSampler2(
+            self.dataset,
+            number_of_batch=2,
+            episodes=self.ep,
+            sample_per_class=self.n,
+            classes_per_ep=self.k,
+            queries=self.q,
+        )
+
+    def test_output_shape(self):
+        assert next(iter(self.few_shot_sampler)).shape == (
+            self.ep * self.k * (self.n + self.q),
+            1,
+        )
