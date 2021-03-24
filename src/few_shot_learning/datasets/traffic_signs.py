@@ -124,9 +124,9 @@ class TrafficSignDataset(FewShotDataSet):
 
 
     def get_support(self, n, k):
-        indices = self.get_index_in_class(k)
+        indices = self.get_index_in_class(k).tolist()
 
-        samples = random.sample(n, indices)
+        samples = random.sample(indices, n)
 
         batch = []
 
