@@ -47,12 +47,13 @@ if __name__ == "__main__":
     # ## load data
 
     transform = torchvision.transforms.Compose([
-                                            torchvision.transforms.Resize(256),
-                                            torchvision.transforms.RandomCrop(224),
+                                            torchvision.transforms.Resize(136),
+                                            torchvision.transforms.RandomCrop(128),
                                             torchvision.transforms.ToTensor(),
                                             torchvision.transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                                                  std=[0.229, 0.224, 0.225])
                                            ])
+
 
     with open('train_eval.pkl', 'rb') as f:
         train_eval = pickle.load("train_eval", f)
@@ -109,7 +110,7 @@ if __name__ == "__main__":
     )
 
     test_taskloader = torch.utils.data.DataLoader(
-        eval_dataset, num_workers=10
+        test_dataset, batch_size=128, num_workers=10
     )
 
     # In[26]:
@@ -130,7 +131,7 @@ if __name__ == "__main__":
         optim = torch.optim.Adam(model_adaptater.model.parameters(), lr=lr)
         scheduler = torch.optim.lr_scheduler.StepLR(optim, step_size=step_size, gamma=0.1)
     
-        trainer = TrainerFewShot(model_adaptater.model_adaptater, device)
+        trainer = TrainerFewShot(model_adaptater, device)
 
         epochs = args.nb_epochs
         nb_eval = args.nb_eval
@@ -140,21 +141,21 @@ if __name__ == "__main__":
         support_img = train_dataset.get_support(5, rare_class_index)
         index_list = model_adaptater.search(test_taskloader, support_img )
 
-        correct = 0
+        order_ = []
 
-        for idx in index_list():
+        for i, idx in enumerate(index_list()):
             fn = test_dataset.data[idx]
             c = test_dataset.labels[idx]
 
             if c == rare_class_index:
-                correct += 1
+                order_.append(i)
 
             train_dataset.add_datapoint(fn, c)
             
         test_dataset.remove_datapoints(index_list)
 
 
-        print("Correct:",correct, "out of hundered." )
+        print("Ordering:", order_ )
 
         train_dataset.update_indices()
         test_dataset.update_indices()

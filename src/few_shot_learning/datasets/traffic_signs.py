@@ -43,7 +43,7 @@ class TrafficSignDataset(FewShotDataSet):
 
         self.classes_indexes = [[] for _ in label_list]
 
-        for index, fn in enumerate(tqdm(file_names)):
+        for fn in tqdm(file_names):
             self.data.append(fn)
 
             label = fn.split("/")[-2]
@@ -172,7 +172,10 @@ class TrafficSignDataset(FewShotDataSet):
 
             for path in glob.glob(partial_dir + "/" + fn + "/*/*"):
                 c = path.split("/")[-2]
-                self.add_datapoint(path, c)
+
+                # Only add the data point if the class is included in the data set
+                if c in self.labels: 
+                    self.add_datapoint(path, c)
 
     def add_datapoint(self, file_name, class_):
 

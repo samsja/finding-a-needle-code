@@ -51,65 +51,70 @@ class ProtoNetAdaptater(ModuleAdaptater):
         self.k = k
         self.q = q
         self.device = device
-        
+        self.model = model
 
 
     def preprocess_batch(self, batch, device, NB, Q, K):
-        x, _ = batch # (NB*(K+Q), 3, 224, 224) exepcted 
-        x = x.view(NB, K+Q, 3, x.shape[-2], x.shape[-1])
+        x, _ = batch # (NB*(K+Q), 3, H, W) exepcted 
 
-        S_ = x[:, :K] # (NB, K, 3, 224, 224)
-        Q_ = x[:, K:] # (NB, Q, 3, 224, 224)
+        H, W =  x.shape[-2], x.shape[-1]
 
-        S_ = S_.contiguous().view(NB*K, 3, 224, 224)
-        Q_ = Q_.contiguous.view(NB*Q, 3, 224, 224)
+        x = x.view(NB, K+Q, 3, H, W)
+
+        S_ = x[:, :K] # (NB, K, 3, H, W)
+        Q_ = x[:, K:] # (NB, Q, 3, H, W)
+
+        S_ = S_.contiguous().view(NB*K, 3, H, W)
+        Q_ = Q_.contiguous.view(NB*Q, 3, H, W)
 
         return S_.to(device), Q_.to(device)
 
 
     def get_dist(self, center, features):
-    """
-        Args:
-            centers : tensor. (512)
-            features : tensor. (_, 512)
+        """
+            Args:
+                centers : tensor. (512)
+                features : tensor. (_, 512)
 
-        Return:
-             : tensor.  distance between features and center
+            Return:
+                : tensor.  distance between features and center (_, 1)
+                
+        """
 
-    """
-    return ((center-features)**2).sum(dim=-1)
+        return ((center-features)**2).sum(dim=-1)
 
 
     def loss_fn(self, centers, features):
-    """
-    Args:
-        centers : tensor. (NB, 512)
-        features : tensor. (NB, Q, 512)
+        """
+        Args:
+            centers : tensor. (NB, 512)
+            features : tensor. (NB, Q, 512)
 
-    Return:
-        loss : tensor. Total loss for batch
+        Return:
+            loss : tensor. Total loss for batch
 
-    """
+        """
 
-    # Calculate loss
-    mini_dist = 0
-    maxim_dist = 0
+        # Calculate loss
+        mini_dist = 0
+        maxim_dist = 0
 
-    for j, q in enumerate(features):
-        ind = list(range(centers.shape[0]))
-        del ind[j]
-        
-        for f_ in q:
-            dists = get_dist(centers, f_)
+        for j, q in enumerate(features):
+            ind = list(range(centers.shape[0]))
+            del ind[j]
             
-            mini_dist += dists[j]
-            
-            tmp = torch.clamp(dists[ind], 0, 40)
-            tmp = torch.exp(-tmp).sum()
-            
-            maxim_dist += torch.log(tmp)
-            
-    return (maxim_dist + mini_dist) / (features.shape[0] * features.shape[1])
+            for f_ in q:
+                dists = self.get_dist(centers, f_)
+                
+                mini_dist += dists[j]
+                
+                tmp = torch.clamp(dists[ind], 0, 40)
+                tmp = torch.exp(-tmp).sum()
+                
+                maxim_dist += torch.log(tmp)
+                
+        return (maxim_dist + mini_dist) / (features.shape[0] * features.shape[1])
+
 
     def get_loss_and_accuracy(self, inputs, labels, accuracy=False):
 
@@ -119,7 +124,7 @@ class ProtoNetAdaptater(ModuleAdaptater):
                                         self.q, 
                                         self.k) 
 
-        # S_, Q_ = (NB*K, 3, 224, 224), (NB*Q, 3, 224, 224)
+        # S_, Q_ = (NB*K, 3, H, W), (NB*Q, 3, H, W)
 
         C = self.model(S_) # (NB*K, 512)
         C = C.view(self.n, self.k, 512)
@@ -147,16 +152,20 @@ class ProtoNetAdaptater(ModuleAdaptater):
         return loss, accuracy
 
 
-    def search(self, dl, support_vector):
+    def search(self, dl, support_img):
         l = []
 
+        support_vector = self.model(support_img) # (N, 2048)
+        support_vector = support_vector.mean(dim=0) # (2048)
+
         for batch in dl:
-            output = self.model(batch["img"])
+            output = self.model(batch["img"]) # (B, 2048)
 
-            dists = self.get_dist(support_vector, output).tolist()
+            dists = self.get_dist(support_vector, output) # (B, 1)
+            dists = dists.squeeze(-1).tolist() # (B,)
 
+            l += (batch["id"], dists)
 
-            l += (batch["id"].tolist(), dists)
-
-        l.sort()
-        return l
+        l = sorted(l, key=lambda tup: tup[1])
+        
+        return list(zip(*l))[0]
