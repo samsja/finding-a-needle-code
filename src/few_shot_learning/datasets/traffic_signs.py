@@ -131,23 +131,24 @@ class TrafficSignDataset(FewShotDataSet):
         batch = []
 
         for i in samples:
-            x = self.__get_item(i)["img"]
+            x = self.__getitem__(i)["img"]
             batch.append(x)
 
-        return torch.tensor(batch)
+        return torch.stack(batch)
 
     def get_all_support_set(self, k):
         batch = []
 
         for c in range(self._classes):
-            indices = self.get_index_in_class(c)
-            samples = random.sample(k, indices)
+            indices = self.get_index_in_class(c).tolist()
+
+            samples = random.sample(indices, k)
 
             for i in samples:
-                x = self.__get_item(i)["img"]
+                x = self.__getitem__(i)["img"]
                 batch.append(x)
 
-        return torch.tensor(batch)
+        return torch.stack(batch)
 
     def add_partial(self, partial_dir):
         """
