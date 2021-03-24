@@ -46,15 +46,6 @@ if __name__ == "__main__":
 
     # ## load data
 
-    class TrafficSignDatasetWrapper(TrafficSignDataset):
-
-        def __init__(self,*args,**kwargs):
-            super(TrafficSignDatasetWrapper,self).__init__(*args,**kwargs)
-
-        def __getitem__(self,idx):
-            data = super(TrafficSignDatasetWrapper,self).__getitem__(idx)
-            return data["img"],data["label"]
-
     transform = torchvision.transforms.Compose([
                                             torchvision.transforms.Resize(256),
                                             torchvision.transforms.RandomCrop(224),
@@ -70,19 +61,19 @@ if __name__ == "__main__":
         test = pickle.load("test", f)
 
 
-    train_dataset = TrafficSignDatasetWrapper(
+    train_dataset = TrafficSignDataset(
         train_eval, transform = transform
     )
 
     train_dataset.add_partial()
 
-    eval_dataset = TrafficSignDatasetWrapper(
+    eval_dataset = TrafficSignDataset(
         train_eval, transform = transform
     )
 
     eval_dataset.add_partial()
 
-    test_dataset = TrafficSignDatasetWrapper(
+    test_dataset = TrafficSignDataset(
         test, transform = transform
     )
 

@@ -89,6 +89,18 @@ class TrainerFewShot:
 
         return loss
 
+
+    def _get_data_from_batch(self,batch):
+        
+        try:
+            inputs,labels = batch["img"],batch["label"]
+        except TypeError:
+            inputs, labels = batch
+
+
+        return inputs,labels
+
+
     def fit(
         self,
         epochs: int,
@@ -116,7 +128,7 @@ class TrainerFewShot:
 
             for batch_idx, batch in enumerate2(bg_taskloader):
 
-                inputs, labels = batch
+                inputs, labels = self._get_data_from_batch(batch)
 
                 loss = self.train_model(inputs.to(self.device), labels.to(self.device), optim)
 
@@ -136,7 +148,7 @@ class TrainerFewShot:
 
                     for batch_idx, batch in enumerate(eval_taskloader):
 
-                        inputs_eval, labels_eval = batch
+                        inputs_eval, labels_eval = self._get_data_from_batch(batch)
 
                         (
                             loss,
@@ -177,7 +189,7 @@ class TrainerFewShot:
             with torch.no_grad():
                 self.model_adaptater.model.eval()
 
-                inputs, labels = batch
+                inputs, labels = self._get_data_from_batch(batch)
 
                 _, accuracy_batch = self.model_adaptater.get_loss_and_accuracy(
                     inputs.to(self.device), labels.to(self.device), accuracy=True
@@ -219,7 +231,10 @@ def get_miss_match_few_shot(
         with torch.no_grad():
             model_adaptater.model.eval()
 
-            inputs, _ = batch
+            try :
+                inputs, _ = batch
+            except:
+                inputs = batch["img"]
 
             # mis_inputs,mis_class,true_class,support_inputs = model_adaptater.get_mismatch_inputs(inputs)
 

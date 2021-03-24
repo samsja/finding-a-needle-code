@@ -13,6 +13,8 @@ from tqdm import tqdm
 def get_file_name_from_folder(root_dir, exclude_class):
 
     list_of_datapoints = []
+    label_list = []
+
     for i, c in tqdm(enumerate(os.listdir(root_dir))):
         if i not in exclude_class:
             list_of_datapoints_in_folder = os.listdir(root_dir + "/" + c)
@@ -20,7 +22,9 @@ def get_file_name_from_folder(root_dir, exclude_class):
                 root_dir + "/" + c + "/" + s for s in list_of_datapoints_in_folder
             ]
 
-    return list_of_datapoints
+            label_list.append(c)
+
+    return list_of_datapoints,label_list
 
 
 class TrafficSignDataset(FewShotDataSet):
