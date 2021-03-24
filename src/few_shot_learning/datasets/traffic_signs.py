@@ -37,18 +37,20 @@ class TrafficSignDataset(FewShotDataSet):
         self.labels = []
         self.labels_str = label_list
 
-        self.classes_indexes = {}
+        self.classes_indexes = [ [] for _ in label_list]
 
-        for fn in tqdm(file_names):
+        for index,fn in enumerate(tqdm(file_names)):
             self.data.append(fn)
 
             label = fn.split("/")[-2]
 
-            self.labels.append(self.labels_str.index(label))
-
-
-        for key in self.classes_indexes.keys():
-            self.classes_indexes[key] = torch.tensor(self.classes_indexes[key])
+            label_idx = self.labels_str.index(label) 
+            self.labels.append(label_idx)
+            
+            self.classes_indexes[label_idx].append(index)	
+            
+        for i in range(len(self.classes_indexes)):
+            self.classes_indexes[i] = torch.tensor(self.classes_indexes[i])
 
         self._classes = torch.tensor(self.labels).unique()
 
@@ -213,7 +215,7 @@ from typing import Dict, List
 
 @torch.jit.script
 def _script_get_index_in_class_vect(
-    class_idx_vect: torch.Tensor, classes_indexes: Dict[int, torch.Tensor]
+    class_idx_vect: torch.Tensor, classes_indexes: List[torch.Tensor]
 ):
     """
     vectorized Method to get the indexes of the elements in the same class as class_idx
