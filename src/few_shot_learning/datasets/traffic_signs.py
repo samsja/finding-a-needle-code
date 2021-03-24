@@ -47,7 +47,7 @@ class TrafficSignDataset(FewShotDataSet):
             label_idx = self.labels_str.index(label)
             self.labels.append(label_idx)
 
-        self._update_classes_indexes()
+        self.update_classes_indexes()
         self._classes = torch.tensor(self.labels).unique()
 
         self.transform = transform
@@ -56,7 +56,7 @@ class TrafficSignDataset(FewShotDataSet):
     def __len__(self):
         return len(self.labels)
 
-    def _update_classes_indexes(self):
+    def update_classes_indexes(self):
 
         for index, label_idx in enumerate(self.labels):
             self.classes_indexes[label_idx].append(index)
@@ -196,8 +196,6 @@ class TrafficSignDataset(FewShotDataSet):
 
         self._classes = torch.tensor(self.labels).unique()
 
-        self._update_classes_indexes()
-
     def remove_datapoints(self, ids):
         """
         Method for removing single data point from dataset
@@ -212,9 +210,6 @@ class TrafficSignDataset(FewShotDataSet):
         self.labels = [i for  j, i in enumerate(self.labels) if j not in ids]
 
         self._classes = torch.tensor(self.labels).unique()
-
-        self._update_classes_indexes()
-
 
 from typing import Dict, List
 
