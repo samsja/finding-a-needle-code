@@ -37,21 +37,17 @@ class TrafficSignDataset(FewShotDataSet):
         self.labels = []
         self.labels_str = label_list
 
-        self.classes_indexes = [ [] for _ in label_list]
+        self.classes_indexes = [[] for _ in label_list]
 
-        for index,fn in enumerate(tqdm(file_names)):
+        for index, fn in enumerate(tqdm(file_names)):
             self.data.append(fn)
 
             label = fn.split("/")[-2]
 
-            label_idx = self.labels_str.index(label) 
+            label_idx = self.labels_str.index(label)
             self.labels.append(label_idx)
-            
-            self.classes_indexes[label_idx].append(index)	
-            
-        for i in range(len(self.classes_indexes)):
-            self.classes_indexes[i] = torch.tensor(self.classes_indexes[i])
 
+        self._update_classes_indexes()
         self._classes = torch.tensor(self.labels).unique()
 
         self.transform = transform
@@ -60,6 +56,13 @@ class TrafficSignDataset(FewShotDataSet):
     def __len__(self):
         return len(self.labels)
 
+    def _update_classes_indexes(self):
+
+        for index, label_idx in enumerate(self.labels):
+            self.classes_indexes[label_idx].append(index)
+
+        for i in range(len(self.classes_indexes)):
+            self.classes_indexes[i] = torch.tensor(self.classes_indexes[i])
 
     def get_index_in_class(self, class_idx):
         """
@@ -142,7 +145,6 @@ class TrafficSignDataset(FewShotDataSet):
 
         return torch.tensor(batch)
 
-
     def add_partial(self, partial_dir):
         """
         Method for adding all partially labeled data points associated with all data points in this dataset.
@@ -157,17 +159,16 @@ class TrafficSignDataset(FewShotDataSet):
         set_ = set()
 
         for fn in self.data:
-            fn = fn.split("/")[-1].split(".")[0][-22:] # Extract only filename
+            fn = fn.split("/")[-1].split(".")[0][-22:]  # Extract only filename
 
             if fn in set_:
                 continue
 
             set_.add(fn)
 
-            for path in glob.glob(partial_dir+ "/" + fn + "/*/*"):
+            for path in glob.glob(partial_dir + "/" + fn + "/*/*"):
                 c = path.split("/")[-2]
                 self.add_datapoint(path, c)
-
 
     def add_datapoint(self, file_name, class_):
 
@@ -179,20 +180,23 @@ class TrafficSignDataset(FewShotDataSet):
             class_ : String. Name of class data point belongs to
 
         """
-        
+
         c_idx = self.labels_str.index(class_)  # Get class index
-        
+
         try:
             i = self.labels.index(c_idx)  # Find first position of the class
 
         except:
-            i = len(self.labels) # If no data point of c_idx exists, add at end of list.
-            
+            i = len(
+                self.labels
+            )  # If no data point of c_idx exists, add at end of list.
+
         self.data.insert(i, file_name)
         self.labels.insert(i, c_idx)
 
         self._classes = torch.tensor(self.labels).unique()
 
+        self._update_classes_indexes()
 
     def remove_datapoints(self, ids):
         """
@@ -208,6 +212,8 @@ class TrafficSignDataset(FewShotDataSet):
         self.labels = [i for  j, i in enumerate(self.labels) if j not in ids]
 
         self._classes = torch.tensor(self.labels).unique()
+
+        self._update_classes_indexes()
 
 
 from typing import Dict, List
