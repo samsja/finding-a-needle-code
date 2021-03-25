@@ -138,6 +138,10 @@ if __name__ == "__main__":
 
         trainer.fit(epochs, nb_eval, optim, scheduler, train_taskloader, eval_taskloader)
 
+        # Perform search
+
+        model_adaptater.model = trainer.model_checkpoint
+
         support_img = train_dataset.get_support(5, rare_class_index)
         index_list = model_adaptater.search(test_taskloader, support_img )
 
@@ -154,8 +158,7 @@ if __name__ == "__main__":
             
         test_dataset.remove_datapoints(index_list)
 
-
-        print("Ordering:", order_ )
+        print("Ordering:", order_)
 
         train_dataset.update_indices()
         test_dataset.update_indices()

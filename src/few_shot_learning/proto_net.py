@@ -23,7 +23,6 @@ class ProtoNet(torch.nn.Module):
         resnet = list(resnet18().children())[:-1]
         self.feature_extractor = nn.Sequential(*resnet)
 
-
     def forward(self, x):
         return self.feature_extractor(x).view(-1, 512)
 
@@ -124,7 +123,7 @@ class ProtoNetAdaptater(ModuleAdaptater):
                                         self.q, 
                                         self.k) 
 
-        # S_, Q_ = (NB*K, 3, H, W), (NB*Q, 3, H, W)
+        # S_, Q_ = (NB*K, 3, 224, 224), (NB*Q, 3, 224, 224)
 
         C = self.model(S_) # (NB*K, 512)
         C = C.view(self.n, self.k, 512)
@@ -155,16 +154,18 @@ class ProtoNetAdaptater(ModuleAdaptater):
     def search(self, dl, support_img):
         l = []
 
-        support_vector = self.model(support_img) # (N, 2048)
-        support_vector = support_vector.mean(dim=0) # (2048)
+        with torch.no_grad():
+            support_vector = self.model(support_img) # (N, 512)
+
+        support_vector = support_vector.mean(dim=0) # (512)
 
         for batch in dl:
-            output = self.model(batch["img"]) # (B, 2048)
+            with torch.no_grad():
+                output = self.model(batch["img"])
 
-            dists = self.get_dist(support_vector, output) # (B, 1)
-            dists = dists.squeeze(-1).tolist() # (B,)
+            dists = self.get_dist(support_vector, output).squeeze(-1).tolist()
 
-            l += (batch["id"], dists)
+            l += list(zip(batch["id"], dists))
 
         l = sorted(l, key=lambda tup: tup[1])
         
