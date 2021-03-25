@@ -151,7 +151,7 @@ class ProtoNetAdaptater(ModuleAdaptater):
         return loss, accuracy
 
 
-    def search(self, dl, support_img):
+    def search(self, dl, support_img, rare_class_index):
         l = []
 
         with torch.no_grad():

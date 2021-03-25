@@ -143,7 +143,7 @@ if __name__ == "__main__":
         model_adaptater.model = trainer.model_checkpoint
 
         support_img = train_dataset.get_support(5, rare_class_index)
-        index_list = model_adaptater.search(test_taskloader, support_img )
+        index_list = model_adaptater.search(test_taskloader, support_img, rare_class_index)
 
         order_ = []
 
