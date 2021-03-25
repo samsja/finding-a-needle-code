@@ -71,13 +71,14 @@ class StandardNetAdaptater(ModuleAdaptater):
         else:
             return loss, None
 
-    def search(self, dl, support_img):
+    def search(self, dl, support_img, rare_class_index):
         l = []
 
         for batch in dl:
-            logits = self.model(batch["img"])
+            with torch.no_grad():
+                logits = self.model(batch["img"])[:, rare_class_index].tolist()
 
-        l += list(zip(batch["id"], logits))
+            l += list(zip(batch["id"], logits))
 
         l = sorted(l, key=lambda tup: tup[1])
 

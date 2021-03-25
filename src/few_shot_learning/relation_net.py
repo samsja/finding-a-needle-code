@@ -359,7 +359,7 @@ class RelationNetAdaptater(ModuleAdaptater):
 
     @torch.no_grad()
     def search(
-        self, test_taskloader: torch.utils.data.DataLoader, support_set: torch.Tensor
+        self, test_taskloader: torch.utils.data.DataLoader, support_set: torch.Tensor, rare_class_index: int
     ):
 
         self.model.eval()
