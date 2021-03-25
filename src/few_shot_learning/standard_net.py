@@ -6,7 +6,7 @@ from torchvision.models import resnet18
 from .utils_train import ModuleAdaptater
 
 
-class StandardNet(torch.nn.Module):
+class StandardNet(nn.Module):
     """
     Implementation of a standard ResNet classifier in pytorch
 
@@ -14,19 +14,30 @@ class StandardNet(torch.nn.Module):
         classes: int. Number of output nodes
     """
 
-    def __init__(self, classes):
+    def __init__(self, classes, pretrained=True):
         super().__init__()
 
-        resnet = list(resnet18().children())[:-1]
-        
-        self.feature_extractor = nn.Sequential(*resnet)
-        self.fc = nn.Linear(512, classes)
+        self.resnet = resnet18(pretrained=pretrained)
+
+        self.resnet.fc = nn.Linear(self.resnet.fc.in_features, classes)
 
     def forward(self, x):
-        x = self.feature_extractor(x).view(-1, 512)
 
-        return self.fc(x)
+        return self.resnet(x)
 
+    def freeze_firsts_layer(self):
+
+        for p in self.parameters():
+            p.requires_grad = False
+
+        for layer in [self.resnet.layer4, self.resnet.fc]:
+            for p in layer.parameters():
+                p.requires_grad = True
+
+    def unfreeze(self):
+
+        for p in self.parameters():
+            p.requires_grad = True
 
 
 class StandardNetAdaptater(ModuleAdaptater):
@@ -37,33 +48,28 @@ class StandardNetAdaptater(ModuleAdaptater):
     def __init__(
         self,
         model: nn.Module,
-        nb_ep: int,
-        n: int,
-        k: int,
-        q: int,
         device: torch.device,
+        nb_ep: int = None,
+        n: int = None,
+        k: int = None,
+        q: int = None,
     ):
-        super(StandardNetAdaptater, self).__init__(model)
-        
+        super().__init__(model)
+
         self.device = device
         self.model = model
         self.loss_fn = nn.CrossEntropyLoss()
 
-
     def get_loss_and_accuracy(self, inputs, labels, accuracy=False):
-        x, y = inputs["img"].cuda(), inputs["label"].cuda()
-
-        pred = self.model(x)
-
-        loss = self.loss_fn(pred, y)
+        outputs = self.model(inputs)
+        loss = self.loss_fn(outputs, labels)
 
         if accuracy:
-            pred_ = pred.argmax(dim=-1)
+            _, preds = torch.max(outputs, 1)
+            return loss, (preds == labels).float().mean()
 
-            accuracy = (pred_ == y).sum() / y.shape[0]
-
-        return loss, accuracy
-
+        else:
+            return loss, None
 
     def search(self, dl, support_img):
         l = []
@@ -71,8 +77,8 @@ class StandardNetAdaptater(ModuleAdaptater):
         for batch in dl:
             logits = self.model(batch["img"])
 
-            l += list(zip(batch["id"], logits))
+        l += list(zip(batch["id"], logits))
 
         l = sorted(l, key=lambda tup: tup[1])
-        
+
         return list(zip(*l))[0]
