@@ -6,6 +6,7 @@ from .utils_train import ModuleAdaptater
 from torchvision.models import resnet18
 import copy
 
+
 def get_conv_block_mp(
     in_channels: int, out_channels: int, padding: int = 0
 ) -> nn.Module:
@@ -75,15 +76,19 @@ class ResNetEmbeddingModule(nn.Module):
     Embedding module with a ResNet Backbone. Work only with three channel, 224x224 img normalize. Work only with three channel, 224x224 img normalized
     """
 
-    def __init__(self,pretrained: bool = False, pretrained_backbone: nn.Module =  resnet18(pretrained=True)  ):
+    def __init__(
+        self,
+        pretrained: bool = False,
+        pretrained_backbone: nn.Module = resnet18(pretrained=True),
+    ):
         super().__init__()
 
         if pretrained:
-            self.backbone =  copy.deepcopy(resnet18(pretrained=False))
-            
-        else: 
+            self.backbone = copy.deepcopy(resnet18(pretrained=False))
+
+        else:
             self.backbone = resnet18(pretrained=False)
-        
+
         self.backbone.fc = nn.Identity()
         self.backbone.avgpool = nn.Identity()
 
@@ -319,7 +324,6 @@ class RelationNetAdaptater(ModuleAdaptater):
     def __init__(
         self,
         model: nn.Module,
-        loss_func: nn.modules.loss,
         nb_ep: int,
         n: int,
         k: int,
@@ -353,6 +357,32 @@ class RelationNetAdaptater(ModuleAdaptater):
 
         return loss, accuracy
 
+    @torch.no_grad()
+    def search(
+        self, test_taskloader: torch.utils.data.DataLoader, support_set: torch.Tensor
+    ):
+
+        self.model.eval()
+
+        relations = []
+        index = []
+        for idx, batch in enumerate(test_taskloader):
+
+            query_inputs = batch["img"].to(self.device)
+
+            inputs = torch.cat([support_set.to(self.device), query_inputs])
+
+            batch_relations = self.model(
+                inputs.to(self.device), self.nb_ep, self.n, self.k, len(query_inputs)
+            )[0][0][0]
+            relations.append(batch_relations)
+            index.append(batch["id"].to(self.device))
+
+        index = torch.cat(index)
+        relations = torch.cat(relations)
+
+        return index[torch.argsort(relations, descending=True)]
+
     def get_mismatch_inputs(
         self, inputs
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
@@ -378,7 +408,7 @@ class RelationNetAdaptater(ModuleAdaptater):
 
         mask_mismatch_index = outputs != targets
 
-        relation_true_label = relation_outputs.gather(1,targets.unsqueeze(1))[:,0]
+        relation_true_label = relation_outputs.gather(1, targets.unsqueeze(1))[:, 0]
         # end ugly fix
 
         assert (
@@ -398,21 +428,21 @@ class RelationNetAdaptater(ModuleAdaptater):
         )
 
 
+def get_relation_net_adaptater(nb_ep, n, k, q, device):
 
-
-def get_relation_net_adaptater(nb_ep,n,k,q,device):
-
-    model = RelationNet(in_channels=3,out_channels=64,
-                    embedding_module = ResNetEmbeddingModule(pretrained=True),
-                    relation_module=BasicRelationModule(input_size=512,linear_size=512),
-                    device=device,
-                    debug=True,
-                    merge_operator="mean")
+    model = RelationNet(
+        in_channels=3,
+        out_channels=64,
+        embedding_module=ResNetEmbeddingModule(pretrained=True),
+        relation_module=BasicRelationModule(input_size=512, linear_size=512),
+        device=device,
+        debug=True,
+        merge_operator="mean",
+    )
     model.to(device)
 
     model.embedding.freeze_backbone()
 
-    model_adaptater = RelationNetAdaptater(model, None, nb_ep, n, k, q, device)
+    model_adaptater = RelationNetAdaptater(model, nb_ep, n, k, q, device)
 
-    return model_adaptater,model
-
+    return model_adaptater, model
