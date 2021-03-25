@@ -8,7 +8,7 @@ from .utils_train import ModuleAdaptater
 
 class StandardNet(torch.nn.Module):
     """
-    Implementation of the RelationNet model in pytorch
+    Implementation of a standard ResNet classifier in pytorch
 
     # Arguments
         classes: int. Number of output nodes

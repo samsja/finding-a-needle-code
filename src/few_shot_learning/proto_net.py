@@ -8,7 +8,7 @@ from .utils_train import ModuleAdaptater
 
 class ProtoNet(torch.nn.Module):
     """
-    Implementation of the RelationNet model in pytorch
+    Implementation of the ProtoNet model in pytorch
 
     # Arguments
         in_channels: int. number of input channels
