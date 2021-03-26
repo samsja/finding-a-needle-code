@@ -150,34 +150,6 @@ class TrafficSignDataset(FewShotDataSet):
 
         return torch.stack(batch)
 
-    def add_partial(self, partial_dir):
-        """
-        Method for adding all partially labeled data points associated with all data points in this dataset.
-
-        # Args:
-            partial_dir : String. String path to the partially labeled dataset.
-
-        """
-
-        print("Adding partial data...")
-
-        set_ = set()
-
-        for fn in self.data:
-            fn = fn.split("/")[-1].split(".")[0][-22:]  # Extract only filename
-
-            if fn in set_:
-                continue
-
-            set_.add(fn)
-
-            for path in glob.glob(partial_dir + "/" + fn + "/*/*"):
-                c = path.split("/")[-2]
-
-                # Only add the data point if the class is included in the data set
-                if c in self.labels: 
-                    self.add_datapoint(path, c)
-
     def add_datapoint(self, file_name, class_):
 
         """
