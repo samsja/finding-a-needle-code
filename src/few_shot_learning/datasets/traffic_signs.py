@@ -53,10 +53,12 @@ class TrafficSignDataset(FewShotDataSet):
                 self.labels.append(label_idx)
                 self.data.append(f"{root_dir}/{fn}")
 
-        self.update_classes_indexes()
         
         self._unique_classes = torch.tensor(self.labels).unique()
         self._classes = torch.arange(self._unique_classes.size(0))
+
+
+        self.update_classes_indexes()
 
         self.transform = transform
 
@@ -111,7 +113,7 @@ class TrafficSignDataset(FewShotDataSet):
 
         """
 
-        return _script_get_index_in_class_vect(class_idx_vect, self.classes_indexes)
+        return _script_get_index_in_class_vect(class_idx_vect, self.classes_indexes,self._unique_classes)
 
     def __getitem__(self, idx):
         y = self.labels[idx]
@@ -121,9 +123,12 @@ class TrafficSignDataset(FewShotDataSet):
         x = Image.open(url)
         x = self.transform(x)
 
+        if not(type(idx)==torch.Tensor):
+            idx = torch.Tensor(idx)
+
         data = {"img": x, 
                 "label": torch.tensor(y), 
-                "id": torch.tensor(idx)}
+                "id": idx}
 
         return data
 
@@ -203,7 +208,7 @@ from typing import Dict, List
 
 @torch.jit.script
 def _script_get_index_in_class_vect(
-    class_idx_vect: torch.Tensor, classes_indexes: List[torch.Tensor]
+    class_idx_vect: torch.Tensor, classes_indexes: List[torch.Tensor], unique_classes : torch.Tensor
 ):
     """
     vectorized Method to get the indexes of the elements in the same class as class_idx
@@ -213,4 +218,4 @@ def _script_get_index_in_class_vect(
 
     """
 
-    return [classes_indexes[c.item()] for c in class_idx_vect]
+    return [classes_indexes[unique_classes[c].item()] for c in class_idx_vect]
