@@ -47,9 +47,9 @@ class TrafficSignDataset(FewShotDataSet):
         for fn in tqdm(file_names):
             label = fn.split("/")[-2]
 
-            label_idx = self.labels_str.index(label)
-            
-            if label_idx not in exclude_class:
+            if label not in exclude_class:
+                label_idx = self.labels_str.index(label)
+
                 self.labels.append(label_idx)
                 self.data.append(f"{root_dir}/{fn}")
 
