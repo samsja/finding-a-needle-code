@@ -55,30 +55,30 @@ if __name__ == "__main__":
                                            ])
 
 
-    with open('train_eval.pkl', 'rb') as f:
-        train_eval = pickle.load("train_eval", f)
+    with open('traineval_incl_partial.pkl', 'rb') as f:
+        train_eval = pickle.load(f)
 
-    with open('test.pkl', 'rb') as f:
-        test = pickle.load("test", f)
+    with open('test_incl_partial.pkl', 'rb') as f:
+        test = pickle.load(f)
+
+    with open('class_list.pkl', 'rb') as f:
+        label_list = pickle.load(f)
 
 
     train_dataset = TrafficSignDataset(
-        train_eval, transform = transform
+        train_eval, label_list, transform = transform
     )
 
-    train_dataset.add_partial()
 
     eval_dataset = TrafficSignDataset(
-        train_eval, transform = transform
+        train_eval, label_list, transform = transform
     )
 
-    eval_dataset.add_partial()
 
     test_dataset = TrafficSignDataset(
-        test, transform = transform
+        test, label_list, transform = transform
     )
 
-    test_dataset.add_parital()
     
 
     few_shot_sampler = FewShotSampler2(

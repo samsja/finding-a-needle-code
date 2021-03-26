@@ -28,7 +28,7 @@ def get_file_name_from_folder(root_dir, exclude_class):
 
 
 class TrafficSignDataset(FewShotDataSet):
-    def __init__(self, file_names, label_list, transform):
+    def __init__(self, file_names, label_list, transform, exclude_class=[]):
         super().__init__()
         """
         Args:
@@ -44,12 +44,13 @@ class TrafficSignDataset(FewShotDataSet):
         self.classes_indexes = [[] for _ in label_list]
 
         for fn in tqdm(file_names):
-            self.data.append(fn)
-
             label = fn.split("/")[-2]
 
             label_idx = self.labels_str.index(label)
-            self.labels.append(label_idx)
+            
+            if label_idx not in exclude_class:
+                self.labels.append(label_idx)
+                self.data.append(fn)
 
         self.update_classes_indexes()
         self._classes = torch.tensor(self.labels).unique()
@@ -149,34 +150,6 @@ class TrafficSignDataset(FewShotDataSet):
                 batch.append(x)
 
         return torch.stack(batch)
-
-    def add_partial(self, partial_dir):
-        """
-        Method for adding all partially labeled data points associated with all data points in this dataset.
-
-        # Args:
-            partial_dir : String. String path to the partially labeled dataset.
-
-        """
-
-        print("Adding partial data...")
-
-        set_ = set()
-
-        for fn in self.data:
-            fn = fn.split("/")[-1].split(".")[0][-22:]  # Extract only filename
-
-            if fn in set_:
-                continue
-
-            set_.add(fn)
-
-            for path in glob.glob(partial_dir + "/" + fn + "/*/*"):
-                c = path.split("/")[-2]
-
-                # Only add the data point if the class is included in the data set
-                if c in self.labels: 
-                    self.add_datapoint(path, c)
 
     def add_datapoint(self, file_name, class_):
 
