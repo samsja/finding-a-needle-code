@@ -28,7 +28,7 @@ def get_file_name_from_folder(root_dir, exclude_class):
 
 
 class TrafficSignDataset(FewShotDataSet):
-    def __init__(self, file_names : List[str], label_list : List[str], transform, root_dir : str,exclude_class: List[str] = []):
+    def __init__(self, file_names : List[str], label_list : List[str], transform, root_dir : str,exclude_class: List[int] = []):
         super().__init__()
         """
         Args:
@@ -46,10 +46,10 @@ class TrafficSignDataset(FewShotDataSet):
 
         for fn in tqdm(file_names):
             label = fn.split("/")[-2]
-
-            if label not in exclude_class:
-                label_idx = self.labels_str.index(label)
-
+            
+            label_idx = self.labels_str.index(label)
+ 
+            if label_idx not in exclude_class:          
                 self.labels.append(label_idx)
                 self.data.append(f"{root_dir}/{fn}")
 
