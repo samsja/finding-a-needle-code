@@ -54,7 +54,9 @@ class TrafficSignDataset(FewShotDataSet):
                 self.data.append(f"{root_dir}/{fn}")
 
         self.update_classes_indexes()
-        self._classes = torch.tensor(self.labels).unique()
+        
+        self._unique_classes = torch.tensor(self.labels).unique()
+        self._classes = torch.arange(self._unique_classes.size(0))
 
         self.transform = transform
 
@@ -72,6 +74,7 @@ class TrafficSignDataset(FewShotDataSet):
 
     def get_index_in_class(self, class_idx):
         """
+        DEPRECATED
         Method to get the indexes of the elements in the same class as class_idx
 
         # Args:
@@ -97,7 +100,7 @@ class TrafficSignDataset(FewShotDataSet):
 
         """
 
-        return self.classes_indexes[class_idx]
+        return self.classes_indexes[self._unique_classes[class_idx]]
 
     def get_index_in_class_vect(self, class_idx_vect: torch.Tensor):
         """
