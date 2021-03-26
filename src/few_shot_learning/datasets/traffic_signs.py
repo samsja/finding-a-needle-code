@@ -8,7 +8,7 @@ from .datasets import FewShotDataSet
 from torchvision import transforms
 from PIL import Image
 from tqdm import tqdm
-
+from typing import List
 
 def get_file_name_from_folder(root_dir, exclude_class):
 
@@ -28,7 +28,7 @@ def get_file_name_from_folder(root_dir, exclude_class):
 
 
 class TrafficSignDataset(FewShotDataSet):
-    def __init__(self, file_names, label_list, transform, exclude_class=[]):
+    def __init__(self, file_names : List[str], label_list : List[str], transform, root_dir : str,exclude_class: List[str] = []):
         super().__init__()
         """
         Args:
@@ -40,6 +40,7 @@ class TrafficSignDataset(FewShotDataSet):
         self.data = []
         self.labels = []
         self.labels_str = label_list
+        self.root_dir = root_dir
 
         self.classes_indexes = [[] for _ in label_list]
 
@@ -50,7 +51,7 @@ class TrafficSignDataset(FewShotDataSet):
             
             if label_idx not in exclude_class:
                 self.labels.append(label_idx)
-                self.data.append(fn)
+                self.data.append(f"{root_dir}/{fn}")
 
         self.update_classes_indexes()
         self._classes = torch.tensor(self.labels).unique()
