@@ -28,7 +28,7 @@ def get_file_name_from_folder(root_dir, exclude_class):
 
 
 class TrafficSignDataset(FewShotDataSet):
-    def __init__(self, file_names, label_list, transform):
+    def __init__(self, file_names, label_list, transform, exclude_class=[]):
         super().__init__()
         """
         Args:
@@ -44,12 +44,13 @@ class TrafficSignDataset(FewShotDataSet):
         self.classes_indexes = [[] for _ in label_list]
 
         for fn in tqdm(file_names):
-            self.data.append(fn)
-
             label = fn.split("/")[-2]
 
             label_idx = self.labels_str.index(label)
-            self.labels.append(label_idx)
+            
+            if label_idx not in exclude_class:
+                self.labels.append(label_idx)
+                self.data.append(fn)
 
         self.update_classes_indexes()
         self._classes = torch.tensor(self.labels).unique()
