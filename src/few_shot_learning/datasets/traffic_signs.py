@@ -68,6 +68,8 @@ class TrafficSignDataset(FewShotDataSet):
 
     def update_classes_indexes(self):
 
+
+        self.classes_indexes = [[] for _ in range(len(self.classes_indexes) )]
         for index, label_idx in enumerate(self.labels):
             self.classes_indexes[label_idx].append(index)
 
@@ -124,7 +126,7 @@ class TrafficSignDataset(FewShotDataSet):
         x = self.transform(x)
 
         if not(type(idx)==torch.Tensor):
-            idx = torch.Tensor(idx)
+            idx = torch.Tensor([idx]).clone().detach()
 
         data = {"img": x, 
                 "label": torch.tensor(y), 
