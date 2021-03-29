@@ -376,12 +376,15 @@ class RelationNetAdaptater(ModuleAdaptater):
                 inputs.to(self.device), self.nb_ep, self.n, self.k, len(query_inputs)
             )[0][0][0]
             relations.append(batch_relations)
-            index.append(batch["id"].to(self.device))
+            index.append(batch["id"].long().to(self.device))
 
         index = torch.cat(index)
         relations = torch.cat(relations)
 
-        return index[torch.argsort(relations, descending=True)]
+        relations,argsort = torch.sort(relations, descending=True)
+        
+        return index[argsort],relations
+
 
     def get_mismatch_inputs(
         self, inputs
