@@ -7,7 +7,7 @@ import os
 import torchvision.transforms.functional as TF
 from tqdm import tqdm
 
-from  few_shot_learning import FewShotDataSet, FewShotSampler2, RelationNet, ProtoNet, RelationNetAdaptater, ProtoNetAdaptater
+from  few_shot_learning import FewShotDataSet, FewShotSampler2, RelationNet, ProtoNet, RelationNetAdaptater, ProtoNetAdaptater, StandardNet, StandardNetAdaptater
 from  few_shot_learning.datasets import TrafficSignDataset,get_file_name_from_folder
 from  few_shot_learning.utils_train import TrainerFewShot,RotationTransform,get_n_trainable_param
 from few_shot_learning.relation_net import get_relation_net_adaptater
@@ -118,9 +118,12 @@ if __name__ == "__main__":
     if args.model == "RelationNet":
         model = RelationNet()
         model_adaptater = RelationNetAdaptater(model, nb_ep,n,k,q,device)
-    else :
-        model = ProtoNet()
+    if args.model == "ProtoNet" :
+        model = ProtoNet(3)
         model_adaptater = ProtoNetAdaptater(model)
+    else:
+        model = StandardNet(len(label_list))
+        model_adaptater = StandardNetAdaptater(model)
 
     lr = args.lr
 
@@ -147,7 +150,7 @@ if __name__ == "__main__":
 
         order_ = []
 
-        for i, idx in enumerate(index_list()):
+        for i, idx in enumerate(index_list:
             fn = test_dataset.data[idx]
             c = test_dataset.labels[idx]
 

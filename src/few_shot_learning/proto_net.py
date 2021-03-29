@@ -117,7 +117,7 @@ class ProtoNetAdaptater(ModuleAdaptater):
 
     def get_loss_and_accuracy(self, inputs, labels, accuracy=False):
 
-        S_, Q_ = self.preprocess_batch(inputs["img"], 
+        S_, Q_ = self.preprocess_batch(inputs, 
                                         self.device, 
                                         self.n, 
                                         self.q, 
@@ -155,13 +155,13 @@ class ProtoNetAdaptater(ModuleAdaptater):
         l = []
 
         with torch.no_grad():
-            support_vector = self.model(support_img) # (N, 512)
+            support_vector = self.model(support_img.cuda()) # (N, 512)
 
         support_vector = support_vector.mean(dim=0) # (512)
 
         for batch in dl:
             with torch.no_grad():
-                output = self.model(batch["img"])
+                output = self.model(batch["img"].cuda())
 
             dists = self.get_dist(support_vector, output).squeeze(-1).tolist()
 
