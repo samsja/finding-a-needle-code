@@ -62,7 +62,7 @@ class StandardNetAdaptater(ModuleAdaptater):
 
     def get_loss_and_accuracy(self, inputs, labels, accuracy=False):
         outputs = self.model(inputs)
-        loss = self.loss_fn(outputs, labels)
+        loss = self.loss_fn(outputs, labels.long())
 
         if accuracy:
             _, preds = torch.max(outputs, 1)
@@ -76,10 +76,10 @@ class StandardNetAdaptater(ModuleAdaptater):
 
         for batch in dl:
             with torch.no_grad():
-                logits = self.model(batch["img"])[:, rare_class_index].tolist()
+                logits = self.model(batch["img"].cuda())[:, rare_class_index].tolist()
 
             l += list(zip(batch["id"], logits))
 
-        l = sorted(l, key=lambda tup: tup[1])
+        l = sorted(l, key=lambda tup: -tup[1])
 
         return list(zip(*l))[0]
