@@ -117,7 +117,7 @@ class ProtoNetAdaptater(ModuleAdaptater):
 
     def get_loss_and_accuracy(self, inputs, labels, accuracy=False):
 
-        S_, Q_ = self.preprocess_batch(inputs["img"], 
+        S_, Q_ = self.preprocess_batch(inputs, 
                                         self.device, 
                                         self.n, 
                                         self.q, 
