@@ -5,7 +5,7 @@ import torch.nn.functional as F
 from .utils_train import ModuleAdaptater
 from torchvision.models import resnet18
 import copy
-
+from tqdm import tqdm
 
 def get_conv_block_mp(
     in_channels: int, out_channels: int, padding: int = 0
@@ -366,7 +366,7 @@ class RelationNetAdaptater(ModuleAdaptater):
 
         relations = []
         index = []
-        for idx, batch in enumerate(test_taskloader):
+        for idx, batch in enumerate(tqdm(test_taskloader)):
 
             query_inputs = batch["img"].to(self.device)
 
