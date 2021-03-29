@@ -126,7 +126,7 @@ class TrafficSignDataset(FewShotDataSet):
         x = self.transform(x)
 
         if not(type(idx)==torch.Tensor):
-            idx = torch.Tensor(idx)
+            idx = torch.Tensor([idx]).clone().detach()
 
         data = {"img": x, 
                 "label": torch.tensor(y), 
