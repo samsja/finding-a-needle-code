@@ -68,6 +68,8 @@ class TrafficSignDataset(FewShotDataSet):
 
     def update_classes_indexes(self):
 
+
+        self.classes_indexes = [[] for _ in range(len(self.classes_indexes) )]
         for index, label_idx in enumerate(self.labels):
             self.classes_indexes[label_idx].append(index)
 
