@@ -7,6 +7,7 @@ from torchvision.models import resnet18
 import copy
 from tqdm import tqdm
 
+
 def get_conv_block_mp(
     in_channels: int, out_channels: int, padding: int = 0
 ) -> nn.Module:
@@ -316,6 +317,7 @@ class RelationNet(torch.nn.Module):
         return relation.view(*features_cat_shape[:4])
 
 
+######## model adatpater ################
 class RelationNetAdaptater(ModuleAdaptater):
     """
     relation net module adaptater
@@ -359,7 +361,10 @@ class RelationNetAdaptater(ModuleAdaptater):
 
     @torch.no_grad()
     def search(
-        self, test_taskloader: torch.utils.data.DataLoader, support_set: torch.Tensor, rare_class_index: int
+        self,
+        test_taskloader: torch.utils.data.DataLoader,
+        support_set: torch.Tensor,
+        rare_class_index: int,
     ):
 
         self.model.eval()
@@ -381,7 +386,9 @@ class RelationNetAdaptater(ModuleAdaptater):
         index = torch.cat(index)
         relations = torch.cat(relations)
 
-        return index[torch.argsort(relations, descending=True)]
+        relations, argsort = torch.sort(relations, descending=True)
+
+        return index[argsort], relations
 
     def get_mismatch_inputs(
         self, inputs
@@ -446,3 +453,34 @@ def get_relation_net_adaptater(nb_ep, n, k, q, device):
     model_adaptater = RelationNetAdaptater(model, nb_ep, n, k, q, device)
 
     return model_adaptater, model
+
+
+########## utils ##########
+
+
+from .datasets import FewShotDataSet
+from .sampler import ClassSampler
+
+
+def get_features_for_one_class(
+    model: RelationNet, dataset: FewShotDataSet, class_idx: int, num_worker=10
+):
+    with torch.no_grad():
+        model.eval()
+
+        class_sampler = ClassSampler(dataset, class_idx=class_idx, batch_size=128)
+
+        class_loader = torch.utils.data.DataLoader(
+            dataset, batch_sampler=class_sampler, num_workers=num_worker
+        )
+
+        features = []
+        for i, batch in enumerate(class_loader):
+            inputs = batch["img"].to(model.device)
+
+            features.append(model.embedding(inputs))
+
+        features = torch.cat(features, dim=0)
+        features = model.merge_operator(features, dim=0)
+
+    return features
