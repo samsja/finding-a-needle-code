@@ -78,25 +78,6 @@ class TrafficSignDataset(FewShotDataSet):
 
     def get_index_in_class(self, class_idx):
         """
-        DEPRECATED
-        Method to get the indexes of the elements in the same class as class_idx
-
-        # Args:
-            class_idx : int. The index of the desider class
-
-        """
-
-        start = self.labels.index(class_idx)
-
-        try:
-            end = self.labels.index(class_idx + 1)
-        except:
-            end = len(self.labels)
-
-        return torch.arange(start, end)
-
-    def get_index_in_class_opt(self, class_idx):
-        """
         Method to get the indexes of the elements in the same class as class_idx
 
         # Args:

@@ -1,5 +1,5 @@
 import torch
-
+from typing import List
 
 class FewShotDataSet(torch.utils.data.Dataset):
     """
@@ -23,6 +23,17 @@ class FewShotDataSet(torch.utils.data.Dataset):
 
         # Args:
             class_idx : int. The index of the desider class
+
+        """
+        raise NotImplementedError
+
+    
+    def get_index_in_class_vect(self, class_idx: List[int]):
+        """
+        Method to get the indexes of the elements in the same class as class_idx
+
+        # Args:
+            class_idx : list of index The index of the desider class
 
         """
         raise NotImplementedError

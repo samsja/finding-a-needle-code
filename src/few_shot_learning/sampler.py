@@ -202,3 +202,28 @@ def _prepare_one_ep(
         )
 
     return torch.stack(index_to_yield_ep, dim=0)
+
+
+
+#################
+
+class ClassSampler(torch.utils.data.Sampler):
+    """
+    To sanpler data of a given classes of a FewShotDataSet
+    """
+    def __init__(self,dataset : FewShotDataSet ,class_idx : int ,batch_size : int):
+        super().__init__(dataset)
+        self.batch_size = batch_size
+        self.dataset = dataset
+        self.class_index = self.dataset.get_index_in_class(class_idx)
+    
+    def __len__(self) -> int:
+        quotient = len(self.class_index)//self.batch_size  
+        rest = len(self.class_index)%self.batch_size  
+ 
+        return quotient+1 if rest >0 else quotient
+
+    def __iter__(self) -> Iterator:
+        for i in range( len(self)):
+            yield self.class_index[i*self.batch_size:min( (i+1)*self.batch_size,len(self.class_index))]
+
