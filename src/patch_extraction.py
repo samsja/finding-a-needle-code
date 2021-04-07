@@ -11,7 +11,6 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--data_path", default="data/traffic-signs", type=str)
 parser.add_argument("--output_path", default="data/traffic-signs/patched", type=str)
 
-
 args = parser.parse_args()
 
 
@@ -31,6 +30,7 @@ for json_filename in tqdm(os.listdir(annot_path)):
 
     if "json" not in json_filename:
         continue
+
 
     file_id = json_filename[:-5]
 
@@ -68,6 +68,15 @@ for json_filename in tqdm(os.listdir(annot_path)):
 
             x1 = int(signs_[o]["2dMarking"]["FC"]["Top"]["X"])
             x2 = int(signs_[o]["2dMarking"]["FC"]["Bottom"]["X"])
+         
+            assert(x1<x2)
+
+            x_diff = (x2 - x1)/2
+            x1 -= x_diff/2
+            x1 = int(max(0,x1))
+            
+            x2 += x_diff/2
+            x2 = int(min(x2,img.shape[1] -1))
 
             assert x1 < x2
 
@@ -81,19 +90,20 @@ for json_filename in tqdm(os.listdir(annot_path)):
             y1 = int(signs_[o]["2dMarking"]["FC"]["Top"]["Y"])
             y2 = int(signs_[o]["2dMarking"]["FC"]["Bottom"]["Y"])
 
-            assert y1 < y2
+            assert(y1<y2)
 
-            y_diff = (y2 - y1) / 2
-            y1 -= y_diff / 2
-            y1 = int(max(0, y1))
+            y_diff = (y2 - y1)/2
+            y1 -= y_diff/2
+            y1 = int(max(0,y1))
+            
+            y2 += y_diff/2
+            y2 = int(min(y2,img.shape[0] -1 ))
 
-            y2 += y_diff / 2
-            y2 = int(min(y2, img.shape[0] - 1))
 
             patch = img[y1:y2, x1:x2]
 
             if not os.path.isdir(f"{output_path_images}/{class_}"):
-                os.makedirs(f"{output_path_images}/{class_}")
+                os.makedirs(f"{output_path_images}/{class_}")   
 
             Image.fromarray(patch).save(f"{output_path_images}/{class_}/{o}.jpg")
 

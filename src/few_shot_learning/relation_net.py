@@ -259,12 +259,10 @@ class RelationNet(torch.nn.Module):
             features_queries.shape[0], classes_per_ep, *features_queries.shape[-5:]
         )
 
-        features_cat = torch.cat((features_supports, features_queries), dim=4)
+        features_cat_right = torch.cat((features_supports, features_queries), dim=4)
+        features_cat_left = torch.cat((features_queries, features_supports), dim=4)
 
-        if self.debug:
-            pass
-
-        return features_cat
+        return features_cat_right,features_cat_left
 
     def forward(
         self,
@@ -299,7 +297,7 @@ class RelationNet(torch.nn.Module):
         # sum features over each sample per class
         features_supports = self.merge_operator(features_supports, dim=1)
 
-        features_cat = self._concat_features(
+        features_cat_right,features_cat_left = self._concat_features(
             features_supports,
             features_queries,
             episodes,
@@ -308,13 +306,21 @@ class RelationNet(torch.nn.Module):
             queries,
         )
 
-        features_cat_shape = features_cat.shape
+        features_cat_right_shape = features_cat_right.shape
+        features_cat_right = features_cat_right.view(-1, *features_cat_right.shape[-3:])
 
-        features_cat = features_cat.view(-1, *features_cat.shape[-3:])
 
-        relation = self.relation(features_cat)
+        features_cat_left_shape = features_cat_left.shape
+        features_cat_left = features_cat_left.view(-1, *features_cat_left.shape[-3:])
 
-        return relation.view(*features_cat_shape[:4])
+        assert(features_cat_left_shape==features_cat_right_shape)
+
+        relation_right = self.relation(features_cat_right)
+        relation_left = self.relation(features_cat_left)
+
+        relation = (relation_right + relation_left)/2
+
+        return relation.view(*features_cat_right_shape[:4])
 
 
 ######## model adatpater ################
