@@ -46,13 +46,32 @@ if __name__ == "__main__":
 
     # ## load data
 
+
     transform = torchvision.transforms.Compose([
-                                            torchvision.transforms.Resize(136),
+                                            torchvision.transforms.Resize(145),
+                                            torchvision.transforms.RandomRotation(degrees=(-30, 30)),
                                             torchvision.transforms.RandomCrop(128),
+                                            torchvision.transforms.ColorJitter(brightness=0.6, contrast=0.4, saturation=0.7, hue=0.05),
+                                            torchvision.transforms.ToTensor(),
+                                            torchvision.transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                                                 std=[0.229, 0.224, 0.225]),
+        
+                                            torchvision.transforms.GaussianBlur(23, sigma=(0.1, 2.0)),
+
+                                            torchvision.transforms.RandomErasing(p=0.1,scale=(0.02, 0.20), ratio=(0.1, 1.1),value="random"),
+
+        
+                                           ])
+
+
+    transform_test= torchvision.transforms.Compose([
+                                            torchvision.transforms.Resize((128,128)),
                                             torchvision.transforms.ToTensor(),
                                             torchvision.transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                                                  std=[0.229, 0.224, 0.225])
                                            ])
+
+
 
 
     with open('traineval_incl_partial.pkl', 'rb') as f:
@@ -71,12 +90,12 @@ if __name__ == "__main__":
 
 
     eval_dataset = TrafficSignDataset(
-        train_eval, label_list, transform = transform
+        train_eval, label_list, transform = transform_test
     )
 
 
     test_dataset = TrafficSignDataset(
-        test, label_list, transform = transform
+        test, label_list, transform = transform_test
     )
 
     
