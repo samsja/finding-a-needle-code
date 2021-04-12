@@ -13,8 +13,8 @@ class RandomFSDataSet(FewShotDataSet):
         self._classes = torch.arange(10)
         self._length_of_class = 20
 
-    def __getitm__(self, idx):
-        return (torch.zeros((10, 10)), 0)
+    def __getitem__(self, idx):
+        return (torch.zeros((10, 10)), idx//self._length_of_class)
 
     def get_index_in_class(self, class_idx: int):
         """
@@ -77,7 +77,12 @@ class TestFewShotSampler2(unittest.TestCase):
 
         self.dataset = RandomFSDataSet()
 
-        self.few_shot_sampler = FewShotSampler2(
+
+
+    def test_output_shape(self):
+
+
+        few_shot_sampler = FewShotSampler2(
             self.dataset,
             number_of_batch=2,
             episodes=self.ep,
@@ -86,8 +91,45 @@ class TestFewShotSampler2(unittest.TestCase):
             queries=self.q,
         )
 
-    def test_output_shape(self):
+        assert next(iter(few_shot_sampler)).shape == (
+            self.ep * self.k * (self.n + self.q),
+            1,
+        )
+
+    def test_output_shape_clusters(self):
+
+
+        self.few_shot_sampler = FewShotSampler2(
+            self.dataset,
+            number_of_batch=2,
+            episodes=self.ep,
+            sample_per_class=self.n,
+            classes_per_ep=self.k,
+            queries=self.q,
+            clusters= [torch.Tensor([0,1]).long(),torch.Tensor([2,3]).long()]
+        )
+
         assert next(iter(self.few_shot_sampler)).shape == (
             self.ep * self.k * (self.n + self.q),
             1,
         )
+
+
+    def test_clusters(self):
+
+
+        self.few_shot_sampler = FewShotSampler2(
+            self.dataset,
+            number_of_batch=2,
+            episodes=self.ep,
+            sample_per_class=self.n,
+            classes_per_ep=self.k,
+            queries=self.q,
+            clusters= [torch.Tensor([0,1,7,9,2,8]).long()]
+        )
+
+        for _ in range(5):
+            indexes = next(iter(self.few_shot_sampler))
+
+            for idx in indexes:
+                assert self.dataset[idx][1] in torch.cat(self.few_shot_sampler.clusters) 
