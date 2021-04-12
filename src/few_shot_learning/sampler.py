@@ -119,6 +119,8 @@ class FewShotSampler2(torch.utils.data.Sampler):
         self.episodes = episodes
         self.number_of_batch = number_of_batch
 
+        self.weight_class = torch.ones(len(self.dataset.classes))
+
         assert (self.dataset.classes == torch.arange(len(self.dataset.classes))).all()
 
     def __len__(self) -> int:
@@ -144,7 +146,7 @@ class FewShotSampler2(torch.utils.data.Sampler):
 
             index_to_yield = []
             classes_for_episodes = _class_for_episodes(
-                self.episodes, len(self.dataset.classes), self.classes_per_ep
+                self.episodes, self.weight_class, self.classes_per_ep
             )
 
             for episode in range(self.episodes):
@@ -167,14 +169,14 @@ class FewShotSampler2(torch.utils.data.Sampler):
 
 
 @torch.jit.script
-def _class_for_episodes(episodes: int, nb_classes: int, classes_per_ep: int):
+def _class_for_episodes(episodes: int, weight_class: torch.Tensor, classes_per_ep: int):
 
     classes_for_ep = []
 
     for _ in range(episodes):
         classes_for_ep.append(
             torch.multinomial(
-                torch.ones(nb_classes),
+                weight_class,
                 num_samples=classes_per_ep,
                 replacement=False,
             )
