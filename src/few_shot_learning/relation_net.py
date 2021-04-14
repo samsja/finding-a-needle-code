@@ -379,13 +379,14 @@ class RelationNetAdaptater(ModuleAdaptater):
         test_taskloader: torch.utils.data.DataLoader,
         support_set: torch.Tensor,
         rare_class_index: int,
+        tqdm_silent = False,
     ):
 
         self.model.eval()
 
         relations = []
         index = []
-        for idx, batch in enumerate(tqdm(test_taskloader)):
+        for idx, batch in enumerate(tqdm(test_taskloader,disable=tqdm_silent)):
 
             query_inputs = batch["img"].to(self.device)
 
