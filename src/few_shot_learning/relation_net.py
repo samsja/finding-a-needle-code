@@ -262,7 +262,7 @@ class RelationNet(torch.nn.Module):
         features_cat_right = torch.cat((features_supports, features_queries), dim=4)
         features_cat_left = torch.cat((features_queries, features_supports), dim=4)
 
-        return features_cat_right,features_cat_left
+        return features_cat_right, features_cat_left
 
     def forward(
         self,
@@ -275,16 +275,25 @@ class RelationNet(torch.nn.Module):
         """
         forward pass for the relation net
 
-        #Arguments
-            support: torch.tensor. data for the support
-            queries: torch.Tensor. data for the queries
-
         # Return:
             relation_table: torch.tensor. R_i_j is the relation score between queries i and class j
         """
 
         # appply embedding
         features = self.embedding(inputs)
+
+        return self.forward_on_features(
+            features, episodes, sample_per_class, classes_per_ep, queries
+        )
+
+    def forward_on_features(
+        self,
+        features: torch.Tensor,
+        episodes: int,
+        sample_per_class: int,
+        classes_per_ep: int,
+        queries: int,
+    ) -> torch.Tensor:
 
         features = features.view(
             episodes * classes_per_ep, sample_per_class + queries, *features.shape[-3:]
@@ -297,7 +306,7 @@ class RelationNet(torch.nn.Module):
         # sum features over each sample per class
         features_supports = self.merge_operator(features_supports, dim=1)
 
-        features_cat_right,features_cat_left = self._concat_features(
+        features_cat_right, features_cat_left = self._concat_features(
             features_supports,
             features_queries,
             episodes,
@@ -309,16 +318,15 @@ class RelationNet(torch.nn.Module):
         features_cat_right_shape = features_cat_right.shape
         features_cat_right = features_cat_right.view(-1, *features_cat_right.shape[-3:])
 
-
         features_cat_left_shape = features_cat_left.shape
         features_cat_left = features_cat_left.view(-1, *features_cat_left.shape[-3:])
 
-        assert(features_cat_left_shape==features_cat_right_shape)
+        assert features_cat_left_shape == features_cat_right_shape
 
         relation_right = self.relation(features_cat_right)
         relation_left = self.relation(features_cat_left)
 
-        relation = (relation_right + relation_left)/2
+        relation = (relation_right + relation_left) / 2
 
         return relation.view(*features_cat_right_shape[:4])
 
