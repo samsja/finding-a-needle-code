@@ -96,7 +96,6 @@ class FewShotSampler2(torch.utils.data.Sampler):
         sample_per_class: int = 1,
         classes_per_ep: int = 1,
         queries: int = 1,
-        clusters: List[torch.Tensor] = None,
     ):
 
         """Pytorch sampler to generates batches
@@ -106,7 +105,7 @@ class FewShotSampler2(torch.utils.data.Sampler):
             number_of_batch: int , size of the batch
             episodes: int. number of episodes of n-shot,k-way,q-queries for the batch
             sample_per_class: int. Number of sample of each class
-            class_per_ep: int. Number of classes in the episode
+            class_it: int. Number of classes in the episode
             queries: number of queries for each selected class
         """
 
@@ -120,10 +119,7 @@ class FewShotSampler2(torch.utils.data.Sampler):
         self.episodes = episodes
         self.number_of_batch = number_of_batch
 
-        self.clusters = clusters 
-            
-
-
+        self.weight_class = torch.ones(len(self.dataset.classes))
 
         assert (self.dataset.classes == torch.arange(len(self.dataset.classes))).all()
 
@@ -149,16 +145,8 @@ class FewShotSampler2(torch.utils.data.Sampler):
         for batch in range(self.number_of_batch):
 
             index_to_yield = []
-
-            if self.clusters is None:
-                weight_class = torch.ones(len(self.dataset.classes))
-            else:
-                weight_class = torch.zeros(len(self.dataset.classes))
-                idx_cluster = torch.randint(len(self.clusters),(1,)) 
-                weight_class[self.clusters[idx_cluster]] = torch.ones(len(self.clusters[idx_cluster])) 
-
             classes_for_episodes = _class_for_episodes(
-                self.episodes, weight_class, self.classes_per_ep
+                self.episodes, self.weight_class, self.classes_per_ep
             )
 
             for episode in range(self.episodes):
