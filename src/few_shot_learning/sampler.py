@@ -109,7 +109,7 @@ class FewShotSampler2(torch.utils.data.Sampler):
             queries: number of queries for each selected class
         """
 
-        super(FewShotSampler2, self).__init__(dataset)
+        super().__init__(dataset)
 
         self.dataset = dataset
 
