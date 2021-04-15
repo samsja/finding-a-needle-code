@@ -449,12 +449,13 @@ class RelationNetAdaptater(ModuleAdaptater):
         )
 
 
+from torchvision.models import resnet18
 def get_relation_net_adaptater(nb_ep, n, k, q, device):
 
     model = RelationNet(
         in_channels=3,
         out_channels=64,
-        embedding_module=ResNetEmbeddingModule(pretrained=True),
+        embedding_module=ResNetEmbeddingModule(resnet18(pretrained=True)),
         relation_module=BasicRelationModule(input_size=512, linear_size=512),
         device=device,
         debug=True,
