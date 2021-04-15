@@ -43,7 +43,7 @@ def plot_list(images,title=None,ncols=4,figsize=(7,7),img_from_tensor=lambda x:x
             ax[x,y].set_title(title[i])
 
 
-def plot_search(n,top,relation,figsize=(7,7),img_from_tensor=lambda x:x,ncols=4):
+def plot_search(n,top,relation,test_dataset,figsize=(7,7),img_from_tensor=lambda x:x,ncols=4):
     top_n = torch.stack([test_dataset[i.item()]["img"] for i in top[0:n]])
     title = ["{:.2f}".format(r.item()) for r in relation[0:n]]
     
