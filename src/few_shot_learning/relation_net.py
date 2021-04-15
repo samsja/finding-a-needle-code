@@ -79,16 +79,15 @@ class ResNetEmbeddingModule(nn.Module):
 
     def __init__(
         self,
-        pretrained: bool = False,
-        pretrained_backbone: nn.Module = resnet18(pretrained=True),
+        pretrained_backbone: nn.Module = None,
     ):
         super().__init__()
 
-        if pretrained:
-            self.backbone = copy.deepcopy(resnet18(pretrained=False))
+        if pretrained_backbone is None:
+            self.backbone = resnet18(pretrained=False)
 
         else:
-            self.backbone = resnet18(pretrained=False)
+            self.backbone = pretrained_backbone
 
         self.backbone.fc = nn.Identity()
         self.backbone.avgpool = nn.Identity()

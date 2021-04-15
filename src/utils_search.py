@@ -100,4 +100,4 @@ def search_rare_class(
         plot_image_to_find(class_to_search_for,test_dataset,relation,top)
 
     
-    return len(test_dataset.get_index_in_class(class_to_search_for)), c5,c20, c100,c1000, top
+    return len(test_dataset.get_index_in_class(class_to_search_for)), c5,c20, c100,c1000, top,relation
