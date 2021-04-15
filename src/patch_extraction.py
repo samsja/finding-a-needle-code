@@ -87,6 +87,15 @@ for json_filename in tqdm(os.listdir(annot_path)):
             x2 += x_diff / 2
             x2 = int(min(x2, img.shape[1] - 1))
 
+            assert x1 < x2
+
+            x_diff = (x2 - x1) / 2
+            x1 -= x_diff / 2
+            x1 = int(max(0, x1))
+
+            x2 += x_diff / 2
+            x2 = int(min(x2, img.shape[1] - 1))
+
             y1 = int(signs_[o]["2dMarking"]["FC"]["Top"]["Y"])
             y2 = int(signs_[o]["2dMarking"]["FC"]["Bottom"]["Y"])
 
@@ -98,7 +107,6 @@ for json_filename in tqdm(os.listdir(annot_path)):
             
             y2 += y_diff/2
             y2 = int(min(y2,img.shape[0] -1 ))
-
 
             patch = img[y1:y2, x1:x2]
 
