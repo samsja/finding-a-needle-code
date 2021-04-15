@@ -19,7 +19,7 @@ def imshow(inp, title=None):
         plt.title(title)
 
 
-def plot_list(images,title=None,ncols=4,figsize=(7,7),img_from_tensor=lambda x:x):
+def plot_list(images,title=None,ncols=4,figsize=(7,7),img_from_tensor=img_from_tensor):
     quotient = images.shape[0] // ncols
     rest = images.shape[0] % ncols
     
@@ -42,9 +42,3 @@ def plot_list(images,title=None,ncols=4,figsize=(7,7),img_from_tensor=lambda x:x
         if title is not None:
             ax[x,y].set_title(title[i])
 
-
-def plot_search(n,top,relation,test_dataset,figsize=(7,7),img_from_tensor=lambda x:x,ncols=4):
-    top_n = torch.stack([test_dataset[i.item()]["img"] for i in top[0:n]])
-    title = ["{:.2f}".format(r.item()) for r in relation[0:n]]
-    
-    plot_list(top_n,title=title,figsize=figsize,img_from_tensor=img_from_tensor,ncols=ncols)
