@@ -373,7 +373,7 @@ class RelationNetAdaptater(ModuleAdaptater):
         return loss, accuracy
 
     @torch.no_grad()
-    def search(
+    def search_tensor(
         self,
         test_taskloader: torch.utils.data.DataLoader,
         support_set: torch.Tensor,
@@ -403,6 +403,8 @@ class RelationNetAdaptater(ModuleAdaptater):
         relations, argsort = torch.sort(relations, descending=True)
 
         return index[argsort], relations
+
+    
 
     def get_mismatch_inputs(
         self, inputs

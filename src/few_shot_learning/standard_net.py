@@ -5,6 +5,8 @@ import torch
 from torchvision.models import resnet18
 from .utils_train import ModuleAdaptater
 
+from tqdm import tqdm
+
 
 class StandardNet(nn.Module):
     """
@@ -83,3 +85,35 @@ class StandardNetAdaptater(ModuleAdaptater):
         l = sorted(l, key=lambda tup: -tup[1])
 
         return list(zip(*l))[0]
+
+    
+    @torch.no_grad()
+    def search_tensor(
+        self,
+        test_taskloader: torch.utils.data.DataLoader,
+        support_set: torch.Tensor,
+        rare_class_index: int,
+        tqdm_silent = False,
+    ):
+
+        self.model.eval()
+
+        relations = []
+        index = []
+        for idx, batch in enumerate(tqdm(test_taskloader,disable=tqdm_silent)):
+
+            query_inputs = batch["img"].to(self.device)
+
+            logits = F.softmax(self.model(batch["img"].to(self.device)),dim=1)[:, rare_class_index]
+    
+            relations.append(logits)
+            index.append(batch["id"].long().to(self.device))
+
+        index = torch.cat(index)
+        relations = torch.cat(relations)
+
+        relations, argsort = torch.sort(relations, descending=True)
+
+        return index[argsort], relations
+
+
