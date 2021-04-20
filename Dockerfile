@@ -35,7 +35,7 @@ RUN curl -sLo ~/miniconda.sh https://repo.continuum.io/miniconda/Miniconda3-py38
  && conda install -y python==3.8.3 \
  && conda clean -ya
 
-RUN conda install pytorch torchvision cudatoolkit=10.2 -c pytorch  && conda clean -ya
+RUN conda install pytorch=1.8.1 torchvision cudatoolkit=10.2 -c pytorch  && conda clean -ya
 RUN conda install jupyter && conda clean -ya 
 
 
