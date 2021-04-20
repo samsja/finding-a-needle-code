@@ -197,7 +197,7 @@ class TrainerFewShot:
         return accuracy / len(accuracy_taskloader)
 
     def get_all_outputs(
-        self, task_loader: torch.utils.data.DataLoader
+        self, task_loader: torch.utils.data.DataLoader, silent=False
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         
         """
@@ -209,7 +209,7 @@ class TrainerFewShot:
         outputs = []
         true_labels = []
 
-        for batch_idx, batch in enumerate(tqdm(task_loader)):
+        for batch_idx, batch in enumerate(tqdm(task_loader,disable=silent)):
             with torch.no_grad():
                 self.model_adaptater.model.eval()
 
