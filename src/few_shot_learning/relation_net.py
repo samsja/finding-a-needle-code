@@ -79,16 +79,15 @@ class ResNetEmbeddingModule(nn.Module):
 
     def __init__(
         self,
-        pretrained: bool = False,
-        pretrained_backbone: nn.Module = resnet18(pretrained=True),
+        pretrained_backbone: nn.Module = None,
     ):
         super().__init__()
 
-        if pretrained:
-            self.backbone = copy.deepcopy(resnet18(pretrained=False))
+        if pretrained_backbone is None:
+            self.backbone = resnet18(pretrained=False)
 
         else:
-            self.backbone = resnet18(pretrained=False)
+            self.backbone = pretrained_backbone
 
         self.backbone.fc = nn.Identity()
         self.backbone.avgpool = nn.Identity()
@@ -374,7 +373,7 @@ class RelationNetAdaptater(ModuleAdaptater):
         return loss, accuracy
 
     @torch.no_grad()
-    def search(
+    def search_tensor(
         self,
         test_taskloader: torch.utils.data.DataLoader,
         support_set: torch.Tensor,
@@ -404,6 +403,8 @@ class RelationNetAdaptater(ModuleAdaptater):
         relations, argsort = torch.sort(relations, descending=True)
 
         return index[argsort], relations
+
+    
 
     def get_mismatch_inputs(
         self, inputs
@@ -450,12 +451,13 @@ class RelationNetAdaptater(ModuleAdaptater):
         )
 
 
+from torchvision.models import resnet18
 def get_relation_net_adaptater(nb_ep, n, k, q, device):
 
     model = RelationNet(
         in_channels=3,
         out_channels=64,
-        embedding_module=ResNetEmbeddingModule(pretrained=True),
+        embedding_module=ResNetEmbeddingModule(resnet18(pretrained=True)),
         relation_module=BasicRelationModule(input_size=512, linear_size=512),
         device=device,
         debug=True,
