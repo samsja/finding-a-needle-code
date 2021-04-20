@@ -28,7 +28,9 @@ class ModuleAdaptater:
     def __init__(self, model: nn.Module):
         self.model = model
 
-    def get_loss_and_accuracy(self, inputs, labels, accuracy=False) -> Tuple[float,float]:
+    def get_loss_and_accuracy(
+        self, inputs, labels, accuracy=False
+    ) -> Tuple[float, float]:
         raise NotImplementedError
 
 
@@ -49,8 +51,7 @@ class TrainerFewShot:
         model_adaptater: ModuleAdaptater,
         device: torch.device,
         checkpoint: bool = False,
-        clip_grad: bool =  True,
-       
+        clip_grad: bool = False,
     ):
         super().__init__()
 
@@ -74,7 +75,6 @@ class TrainerFewShot:
 
         self.clip_grad = clip_grad
 
-       
     def train_model(self, inputs, labels, optim: torch.optim):
 
         self.model_adaptater.model.zero_grad()
@@ -89,17 +89,14 @@ class TrainerFewShot:
 
         return loss
 
+    def _get_data_from_batch(self, batch):
 
-    def _get_data_from_batch(self,batch):
-        
         try:
-            inputs,labels = batch["img"],batch["label"]
+            inputs, labels = batch["img"], batch["label"]
         except TypeError:
             inputs, labels = batch
 
-
-        return inputs,labels
-
+        return inputs, labels
 
     def fit(
         self,
@@ -109,28 +106,26 @@ class TrainerFewShot:
         scheduler: torch.optim,
         bg_taskloader: torch.utils.data.DataLoader,
         eval_taskloader: torch.utils.data.DataLoader,
-        tqdm_on_batch = False,
+        silent=False,
+        tqdm_on_batch=False,
     ):
         period_eval = max(epochs // nb_eval, 1)
 
-        if tqdm_on_batch:
-            enumerate2 = lambda x : enumerate(tqdm(x))
-            range2 =  lambda x : range(x)
-        else:
-            enumerate2 = lambda x : enumerate(x)
-            range2 = lambda x : tqdm(range(x))
-
-        for epoch in range2(epochs):
+        for epoch in tqdm(range(epochs), disable=tqdm_on_batch or silent):
 
             list_loss_batch = []
 
             self.model_adaptater.model.train()
 
-            for batch_idx, batch in enumerate2(bg_taskloader):
+            for batch_idx, batch in enumerate(
+                tqdm(bg_taskloader, disable=not (tqdm_on_batch) or silent)
+            ):
 
                 inputs, labels = self._get_data_from_batch(batch)
 
-                loss = self.train_model(inputs.to(self.device), labels.to(self.device), optim)
+                loss = self.train_model(
+                    inputs.to(self.device), labels.to(self.device), optim
+                )
 
                 list_loss_batch.append(loss.item())
 
@@ -176,11 +171,13 @@ class TrainerFewShot:
                     )
 
                 lr = "{:.2e}".format(scheduler.get_last_lr()[0])
-                print(
-                    f"epoch : {epoch} , loss_train : {self.list_loss[-1]} , loss_val : {self.list_loss_eval[-1]} , accuracy_eval = {self.accuracy_eval[-1]} ,lr : {lr} "
-                )
 
-    def accuracy(self, accuracy_taskloader: torch.utils.data.DataLoader):
+                if not silent:
+                    print(
+                        f"epoch : {epoch} , loss_train : {self.list_loss[-1]} , loss_val : {self.list_loss_eval[-1]} , accuracy_eval = {self.accuracy_eval[-1]} ,lr : {lr} "
+                    )
+
+    def accuracy(self, accuracy_taskloader: torch.utils.data.DataLoader) -> float:
 
         accuracy = 0
 
@@ -198,6 +195,36 @@ class TrainerFewShot:
                 accuracy += accuracy_batch
 
         return accuracy / len(accuracy_taskloader)
+
+    def get_all_outputs(
+        self, task_loader: torch.utils.data.DataLoader
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        
+        """
+        return :
+            outputs: torch.Tensor, the output of the model for the task loader
+            true_label. torch.Tesnor, the true labels for the task loader
+        """
+
+        outputs = []
+        true_labels = []
+
+        for batch_idx, batch in enumerate(tqdm(task_loader)):
+            with torch.no_grad():
+                self.model_adaptater.model.eval()
+
+                inputs, labels = self._get_data_from_batch(batch)
+
+                output = self.model_adaptater.model(inputs.to(self.device))
+                _, output = output.max(dim=1)
+
+                outputs.append(output)
+                true_labels.append(labels.to(self.device))
+
+        outputs = torch.cat(outputs)
+        true_labels = torch.cat(true_labels)
+
+        return outputs,true_labels
 
     def restore_checkpoint(self):
 
@@ -231,7 +258,7 @@ def get_miss_match_few_shot(
         with torch.no_grad():
             model_adaptater.model.eval()
 
-            try :
+            try:
                 inputs, _ = batch
             except:
                 inputs = batch["img"]
