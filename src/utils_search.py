@@ -19,6 +19,12 @@ def prepare_dataset(
 
     index_in_class = train_dataset.get_index_in_class(class_to_search_for)
 
+    for supp in idx_support:
+        assert supp in [
+            train_dataset.data[idx]
+            for idx in train_dataset.get_index_in_class(class_to_search_for)
+        ], f"support {supp} does not belong to the class {class_to_search_for}"
+
     for idx in index_in_class:
         if train_dataset.data[idx] not in idx_support:
             test_dataset.add_datapoint(
@@ -32,10 +38,23 @@ def prepare_dataset(
             if train_dataset.data[idx] not in idx_support:
                 idx_to_remove.append(train_dataset.data.index(train_dataset.data[idx]))
 
+        assert len(idx_to_remove) < len(
+            index_in_class
+        ), f"class {class_to_search_for} will be deleted"
+
+        assert len(idx_to_remove) + len(idx_support) == len(
+            index_in_class
+        ), f"{class_to_search_for} {len(idx_to_remove)} , {len(idx_support)}  == {len(index_in_class)}"
+
+
         train_dataset.remove_datapoints(idx_to_remove)
 
     test_dataset.update_classes_indexes()
     train_dataset.update_classes_indexes()
+
+    assert train_dataset.get_index_in_class(class_to_search_for).shape[0] == len(
+        idx_support
+    ), f"something wrong with class length {class_to_search_for}"
 
 
 def count_in_top(top, class_, test_dataset):
