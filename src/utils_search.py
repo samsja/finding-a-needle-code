@@ -52,9 +52,10 @@ def prepare_dataset(
     test_dataset.update_classes_indexes()
     train_dataset.update_classes_indexes()
 
-    assert train_dataset.get_index_in_class(class_to_search_for).shape[0] == len(
-        idx_support
-    ), f"something wrong with class length {class_to_search_for}"
+    if remove :
+        assert train_dataset.get_index_in_class(class_to_search_for).shape[0] == len(
+            idx_support
+        ), f"something wrong with class length {class_to_search_for}"
 
 
 def count_in_top(top, class_, test_dataset):
