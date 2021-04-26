@@ -36,6 +36,16 @@ class StandardNet(nn.Module):
             for p in layer.parameters():
                 p.requires_grad = True
 
+    def freeze_mlp(self):
+
+        for p in self.parameters():
+            p.requires_grad = False
+
+        for p in self.resnet.fc.parameters():
+            p.requires_grad = True
+
+
+
     def unfreeze(self):
 
         for p in self.parameters():
