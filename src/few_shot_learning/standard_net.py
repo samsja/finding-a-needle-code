@@ -88,7 +88,7 @@ class StandardNetAdaptater(ModuleAdaptater):
 
         for batch in dl:
             with torch.no_grad():
-                logits = self.model(batch["img"].cuda())[:, rare_class_index].tolist()
+                logits = self.model(batch["img"].to(device))[:, rare_class_index].tolist()
 
             l += list(zip(batch["id"], logits))
 
