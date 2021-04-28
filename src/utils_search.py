@@ -84,9 +84,12 @@ def plot_search(
     )
 
 
-def plot_image_to_find(class_to_search_for, test_dataset, relation, top):
+def plot_image_to_find(class_to_search_for, test_dataset, relation, top,max_len=10):
 
     index_to_find = test_dataset.get_index_in_class(class_to_search_for)
+    max_len = min(max_len,len(index_to_find)-1)
+
+    index_to_find = index_to_find[:max_len]
 
     top = top.squeeze(1)
     relation = torch.stack([relation[top == i] for i in index_to_find])
@@ -110,8 +113,10 @@ def search_rare_class(
     plot=False,
     tqdm_silent=False,
     model_type="RelationNet",
+    max_len = 10
 ):
 
+    print(max_len)
     support_img = torch.stack([train_dataset[idx]["img"] for idx in idx_support])
 
     if model_type == "RelationNet":
@@ -144,7 +149,7 @@ def search_rare_class(
             ncols=6,
         )
 
-        plot_image_to_find(class_to_search_for, test_dataset, relation, top)
+        plot_image_to_find(class_to_search_for, test_dataset, relation, top,max_len=max_len)
 
     return (
         len(test_dataset.get_index_in_class(class_to_search_for)),
