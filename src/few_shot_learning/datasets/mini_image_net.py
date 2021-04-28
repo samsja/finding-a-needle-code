@@ -90,3 +90,13 @@ class MiniImageNet(FewShotDataSet):
             (class_idx + 1) * self._length_of_class,
             dtype=torch.long,
         )
+
+    def get_index_in_class_vect(self, class_idx: torch.Tensor) -> List[torch.Tensor]:
+        """
+        Method to get the indexes of the elements in the same class as class_idx
+
+        # Args:
+            class_idx : torch.Tensor , list of index
+
+        """
+        return [self.get_index_in_class(class_) for class_ in class_idx]

@@ -115,8 +115,6 @@ def search_rare_class(
     model_type="RelationNet",
     max_len = 10
 ):
-
-    print(max_len)
     support_img = torch.stack([train_dataset[idx]["img"] for idx in idx_support])
 
     if model_type == "RelationNet":
