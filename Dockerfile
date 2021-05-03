@@ -37,14 +37,19 @@ RUN curl -sLo ~/miniconda.sh https://repo.continuum.io/miniconda/Miniconda3-py38
 
 RUN conda install pytorch=1.8.1 torchvision cudatoolkit=10.2 -c pytorch  && conda clean -ya
 RUN conda install jupyter && conda clean -ya 
+RUN conda install -c conda-forge jupyterlab && conda clean -ya 
+
+
+RUN conda install -c conda-forge jupyterlab_code_formatter
+RUN conda install -c conda-forge xeus-python 
+
+RUN conda install -c anaconda pip 
+RUN pip install tb-nightly
+RUN pip install black isort
 
 
 COPY requirements.txt .
-
-
-
 RUN conda install -c conda-forge  --file requirements.txt
-
 
 EXPOSE 8888 
 
