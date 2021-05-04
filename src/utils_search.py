@@ -1,5 +1,6 @@
 import torch
-from tqdm import tqdm
+
+from tqdm.autonotebook import tqdm
 
 from src.few_shot_learning.relation_net import (
     RelationNet,

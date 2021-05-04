@@ -7,7 +7,7 @@ import os
 from .datasets import FewShotDataSet
 from torchvision import transforms
 from PIL import Image
-from tqdm import tqdm
+from tqdm.autonotebook import tqdm
 from typing import List
 
 def get_file_name_from_folder(root_dir, exclude_class):

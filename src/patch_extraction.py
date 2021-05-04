@@ -5,7 +5,7 @@ import os
 import sys
 
 import argparse
-from tqdm import tqdm
+from tqdm.autonotebook import tqdm
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--data_path", default="data/traffic-signs", type=str)

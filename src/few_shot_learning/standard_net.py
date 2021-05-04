@@ -5,8 +5,7 @@ import torch
 from torchvision.models import resnet18
 from .utils_train import ModuleAdaptater
 
-from tqdm import tqdm
-
+from tqdm.autonotebook import tqdm
 
 class StandardNet(nn.Module):
     """

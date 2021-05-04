@@ -2,7 +2,7 @@ import torchvision
 import torch
 import torch.nn as nn
 import torchvision.transforms.functional as TF
-from tqdm import tqdm
+from tqdm.autonotebook import tqdm
 import random
 import copy
 from typing import Iterator, Tuple

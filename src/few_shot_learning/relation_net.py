@@ -5,8 +5,7 @@ import torch.nn.functional as F
 from .utils_train import ModuleAdaptater
 from torchvision.models import resnet18
 import copy
-from tqdm import tqdm
-
+from tqdm.autonotebook import tqdm
 
 def get_conv_block_mp(
     in_channels: int, out_channels: int, padding: int = 0
