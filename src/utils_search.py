@@ -159,3 +159,111 @@ def search_rare_class(
         top,
         relation,
     )
+
+
+### active_loops:
+
+
+import sklearn.metrics as metrics
+
+def move_found_images(datapoint_to_add, train_dataset, test_dataset):
+    len_train, len_test = len(train_dataset), len(test_dataset)
+
+    for class_ in datapoint_to_add.keys():
+        for datapoint in datapoint_to_add[class_]:
+            train_dataset.add_datapoint(
+                test_dataset.data[datapoint], test_dataset.labels_str[class_]
+            )
+
+    for class_ in datapoint_to_add.keys():
+        test_dataset.remove_datapoints(datapoint_to_add[class_])
+
+    train_dataset.update_classes_indexes()
+    test_dataset.update_classes_indexes()
+
+    # assert(len(train_dataset) + len(test_dataset)  == len_train + len_test)
+
+
+def found_new_images(
+    model_adapter,
+    class_,
+    test_taskloader,
+    train_dataset,
+    top_to_select=3,
+):
+    top, _ = model_adapter.search_tensor(
+        test_taskloader,
+        train_dataset.get_index_in_class(class_),
+        class_,
+        tqdm_silent=False,
+    )
+    topX = top[:top_to_select][:, 0]
+
+    datapoint_to_add = {}
+
+    for data in topX:
+
+        class_data = test_taskloader.dataset[data]["label"]
+
+        if class_data not in datapoint_to_add.keys():
+            datapoint_to_add[class_data] = [data]
+        else:
+            datapoint_to_add[class_data].append(data)
+
+    for class_data in datapoint_to_add.keys():
+        datapoint_to_add[class_data] = torch.Tensor(datapoint_to_add[class_data]).long()
+
+    return datapoint_to_add
+
+
+def train_and_search(
+    mask,
+    epochs,
+    train_loader,
+    val_loader,
+    test_taskloader,
+    trainer,
+    optim_resnet,
+    scheduler_resnet,
+    top_to_select=1,
+    treshold=0.5,
+    only_true_image=True,
+):
+
+    trainer.fit(
+        epochs,
+        1,
+        optim_resnet,
+        scheduler_resnet,
+        train_loader,
+        val_loader,
+        silent=False,
+    )
+
+    outputs, true_labels = trainer.get_all_outputs(val_loader, silent=True)
+
+    precision = torch.Tensor(
+        metrics.precision_score(outputs.to("cpu"), true_labels.to("cpu"), average=None)
+    )
+    recall = torch.Tensor(
+        metrics.recall_score(
+            outputs.to("cpu"), true_labels.to("cpu"), average=None, zero_division=0
+        )
+    )
+
+    precision_mask = precision[mask]
+    recall_mask = recall[mask]
+
+    class_to_rebalanced = mask[torch.where(precision[mask] <= treshold)[0]]
+
+    for class_ in class_to_rebalanced:
+        datapoint_to_add = found_new_images(
+            trainer.model_adaptater,
+            class_,
+            test_taskloader,
+            train_loader.dataset,
+            top_to_select=top_to_select,
+        )
+        move_found_images(datapoint_to_add, train_loader.dataset, test_taskloader.dataset)
+
+    return precision_mask, recall_mask
