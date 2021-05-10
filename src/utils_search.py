@@ -228,11 +228,13 @@ def train_and_search(
     top_to_select=1,
     treshold=0.5,
     only_true_image=True,
+    checkpoint=False,
+    nb_of_eval=1,
 ):
 
     trainer.fit(
         epochs,
-        1,
+        nb_of_eval,
         optim_resnet,
         scheduler_resnet,
         train_loader,
@@ -240,14 +242,19 @@ def train_and_search(
         silent=False,
     )
 
+    if checkpoint:
+        trainer.restore_checkpoint()
+
+
     outputs, true_labels = trainer.get_all_outputs(val_loader, silent=True)
 
     precision = torch.Tensor(
-        metrics.precision_score(outputs.to("cpu"), true_labels.to("cpu"), average=None)
+        metrics.precision_score(true_labels.to("cpu"), outputs.to("cpu"), average=None,zero_division=0)
+
     )
     recall = torch.Tensor(
         metrics.recall_score(
-            outputs.to("cpu"), true_labels.to("cpu"), average=None, zero_division=0
+            true_labels.to("cpu"), outputs.to("cpu"), average=None, zero_division=0
         )
     )
 
