@@ -20,7 +20,7 @@ class ProtoNet(torch.nn.Module):
 
         self.debug = debug
 
-        resnet = list(resnet18().children())[:-1]
+        resnet = list(resnet18(pretrained=True).children())[:-1]
         self.feature_extractor = nn.Sequential(*resnet)
 
     def forward(self, x):
@@ -52,21 +52,16 @@ class ProtoNetAdaptater(ModuleAdaptater):
         self.device = device
         self.model = model
 
-
     def preprocess_batch(self, batch, device, NB, Q, K):
-        x, _ = batch # (NB*(K+Q), 3, H, W) exepcted 
-
+        x = batch # (NB*(K+Q), 3, H, W) exepcted
         H, W =  x.shape[-2], x.shape[-1]
-
         x = x.view(NB, K+Q, 3, H, W)
-
         S_ = x[:, :K] # (NB, K, 3, H, W)
         Q_ = x[:, K:] # (NB, Q, 3, H, W)
-
         S_ = S_.contiguous().view(NB*K, 3, H, W)
-        Q_ = Q_.contiguous.view(NB*Q, 3, H, W)
-
+        Q_ = Q_.contiguous().view(NB*Q, 3, H, W)
         return S_.to(device), Q_.to(device)
+
 
 
     def get_dist(self, center, features):
