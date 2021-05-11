@@ -230,6 +230,7 @@ def train_and_search(
     only_true_image=True,
     checkpoint=False,
     nb_of_eval=1,
+    search=False,
 ):
 
     trainer.fit(
@@ -243,7 +244,7 @@ def train_and_search(
     )
 
     if checkpoint:
-        trainer.restore_checkpoint()
+        trainer.model_adaptater.model = trainer.model_checkpoint
 
 
     outputs, true_labels = trainer.get_all_outputs(val_loader, silent=True)
@@ -261,16 +262,17 @@ def train_and_search(
     precision_mask = precision[mask]
     recall_mask = recall[mask]
 
-    class_to_rebalanced = mask[torch.where(precision[mask] <= treshold)[0]]
+    if search:
+        class_to_rebalanced = mask[torch.where(precision[mask] <= treshold)[0]]
 
-    for class_ in class_to_rebalanced:
-        datapoint_to_add = found_new_images(
-            trainer.model_adaptater,
-            class_,
-            test_taskloader,
-            train_loader.dataset,
-            top_to_select=top_to_select,
-        )
-        move_found_images(datapoint_to_add, train_loader.dataset, test_taskloader.dataset)
+        for class_ in class_to_rebalanced:
+            datapoint_to_add = found_new_images(
+                trainer.model_adaptater,
+                class_,
+                test_taskloader,
+                train_loader.dataset,
+                top_to_select=top_to_select,
+            )
+            move_found_images(datapoint_to_add, train_loader.dataset, test_taskloader.dataset)
 
     return precision_mask, recall_mask
