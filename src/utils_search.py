@@ -258,6 +258,8 @@ def train_and_search(
             true_labels.to("cpu"), outputs.to("cpu"), average=None, zero_division=0
         )
     )
+    
+    accuracy = metrics.accuracy_score(true_labels.to("cpu"), outputs.to("cpu") )
 
     precision_mask = precision[mask]
     recall_mask = recall[mask]
@@ -275,4 +277,4 @@ def train_and_search(
             )
             move_found_images(datapoint_to_add, train_loader.dataset, test_taskloader.dataset)
 
-    return precision_mask, recall_mask
+    return precision_mask, recall_mask,accuracy
