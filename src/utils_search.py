@@ -1,4 +1,5 @@
 import torch
+import matplotlib.pyplot as plt
 
 from tqdm.autonotebook import tqdm
 
@@ -240,32 +241,15 @@ def train_and_search(
         scheduler_resnet,
         train_loader,
         val_loader,
-        silent=False,
+        silent=False,    
     )
 
     if checkpoint:
         trainer.model_adaptater.model = trainer.model_checkpoint
 
 
-    outputs, true_labels = trainer.get_all_outputs(val_loader, silent=True)
-
-    precision = torch.Tensor(
-        metrics.precision_score(true_labels.to("cpu"), outputs.to("cpu"), average=None,zero_division=0)
-
-    )
-    recall = torch.Tensor(
-        metrics.recall_score(
-            true_labels.to("cpu"), outputs.to("cpu"), average=None, zero_division=0
-        )
-    )
-    
-    accuracy = metrics.accuracy_score(true_labels.to("cpu"), outputs.to("cpu") )
-
-    precision_mask = precision[mask]
-    recall_mask = recall[mask]
-
     if search:
-        class_to_rebalanced = mask[torch.where(precision[mask] <= treshold)[0]]
+        class_to_rebalanced = mask
 
         for class_ in class_to_rebalanced:
             datapoint_to_add = found_new_images(
@@ -277,4 +261,24 @@ def train_and_search(
             )
             move_found_images(datapoint_to_add, train_loader.dataset, test_taskloader.dataset)
 
-    return precision_mask, recall_mask,accuracy
+
+def plot_score_one_class(score, class_, scores_df):
+    plt.plot(list(scores_df[scores_df["class"] == class_][score]), label=f"{class_}")
+
+def plot_score(score, scores_df):
+    for class_ in scores_df["class"].unique():
+        plot_score_one_class(score, class_, scores_df)
+
+    plt.plot(
+        list(scores_df[["iteration", score]].groupby(["iteration"]).mean()[score]),
+        label="mean",
+        linewidth=4,
+    )
+    plt.title(f"{score}")
+    plt.legend(
+        loc="upper center",
+        bbox_to_anchor=(0.5, -0.05),
+        fancybox=True,
+        shadow=True,
+        ncol=5,
+    )
