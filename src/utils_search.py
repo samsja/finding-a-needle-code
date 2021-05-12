@@ -226,12 +226,14 @@ def train_and_search(
     trainer,
     optim_resnet,
     scheduler_resnet,
+    model_adaptater_search,
     top_to_select=1,
     treshold=0.5,
     only_true_image=True,
     checkpoint=False,
     nb_of_eval=1,
     search=False,
+  
 ):
 
     trainer.fit(
@@ -253,7 +255,7 @@ def train_and_search(
 
         for class_ in class_to_rebalanced:
             datapoint_to_add = found_new_images(
-                trainer.model_adaptater,
+                model_adaptater_search,
                 class_,
                 test_taskloader,
                 train_loader.dataset,

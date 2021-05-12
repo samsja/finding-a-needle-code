@@ -96,8 +96,8 @@ def exp_active_loop(
     device,
     init_dataset,
     batch_size,
+    model_adapter_search = None,
 ):
-
     scores = {
         "class": [],
         "iteration": [],
@@ -137,6 +137,10 @@ def exp_active_loop(
             optim_resnet, step_size=100, gamma=0.5
         )
 
+
+        if model_adapter_search is None:
+            model_adapter_search = resnet_adapt
+
         for i in tqdm(range(episodes)):
 
             train_and_search(
@@ -148,6 +152,7 @@ def exp_active_loop(
                 trainer,
                 optim_resnet,
                 scheduler_resnet,
+                model_adapter_search,
                 top_to_select=top_to_select,
                 treshold=1,
                 checkpoint=True,
