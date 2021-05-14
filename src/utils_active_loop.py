@@ -14,12 +14,14 @@ import pickle
 from src.few_shot_learning.datasets import TrafficSignDataset
 from src.few_shot_learning.utils_train import TrainerFewShot
 
-def init_dataset(path_data, class_to_search_on, support_filenames, N=1):
+from src.few_shot_learning import FewShotSampler2
 
+
+def get_transform():
     transform = torchvision.transforms.Compose(
         [
             torchvision.transforms.Resize(145),
-            torchvision.transforms.RandomCrop(128),
+            torchvision.transforms.RandomCrop(128)  ,
             torchvision.transforms.ToTensor(),
             torchvision.transforms.Normalize(
                 mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
@@ -37,18 +39,52 @@ def init_dataset(path_data, class_to_search_on, support_filenames, N=1):
         ]
     )
 
-    with open("src/pickles/traineval_incl_partial.pkl", "rb") as f:
+    return transform, transform_test
+
+
+def init_few_shot_dataset(train_dataset, class_to_search_on):
+
+    train_few_shot_dataset = TrafficSignDataset(
+        train_dataset.data,
+        train_dataset.labels_str,
+        train_dataset.transform,
+        root_dir="",
+        exclude_class=class_to_search_on,
+    )
+
+    few_shot_sampler = FewShotSampler2(
+        train_few_shot_dataset,
+        number_of_batch=5,
+        episodes=1,
+        sample_per_class=5,
+        classes_per_ep=50,
+        queries=8,
+    )
+
+    few_shot_taskloader = torch.utils.data.DataLoader(
+        train_few_shot_dataset, batch_sampler=few_shot_sampler, num_workers=5
+    )
+
+    return few_shot_taskloader
+
+
+def init_dataset(path_data, class_to_search_on, support_filenames, N=1):
+
+    transform, transform_test = get_transform()
+
+    with open('src/pickles/traineval_incl_partial.pkl', 'rb') as f:
         train_eval = pickle.load(f)
         train_eval = [x for x in train_eval if "partial" not in x]
 
-    with open("src/pickles/test_incl_partial.pkl", "rb") as f:
+    with open('src/pickles/test_incl_partial.pkl', 'rb') as f:
         test = pickle.load(f)
         test = [x for x in test if "partial" not in x]
 
-    with open("src/pickles/class_list.pkl", "rb") as f:
+    with open('src/pickles/class_list.pkl', 'rb') as f:
         label_list = pickle.load(f)
+        train_, val_ = [], []
+    
 
-    train_, val_ = [], []
     for c in label_list:
         fns = [x for x in test if c + "/" in x]
         ratio = int(len(fns) * 0.9) - 1
@@ -96,7 +132,7 @@ def exp_active_loop(
     device,
     init_dataset,
     batch_size,
-    model_adapter_search = None,
+    model_adapter_search=None,
 ):
     scores = {
         "class": [],
@@ -136,7 +172,6 @@ def exp_active_loop(
         scheduler_resnet = torch.optim.lr_scheduler.StepLR(
             optim_resnet, step_size=100, gamma=0.5
         )
-
 
         if model_adapter_search is None:
             model_adapter_search = resnet_adapt
