@@ -170,7 +170,7 @@ def exp_active_loop(
         optim_resnet = torch.optim.Adam(resnet_model.parameters(), lr=lr)
 
         scheduler_resnet = torch.optim.lr_scheduler.StepLR(
-            optim_resnet, step_size=100, gamma=0.5
+            optim_resnet, step_size=100, gamma=0.9
         )
 
         if model_adapter_search is None:
