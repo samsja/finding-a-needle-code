@@ -192,9 +192,12 @@ def found_new_images(
     train_dataset,
     top_to_select=3,
 ):
+    support_set = torch.stack([train_dataset[idx]["img"] for idx in train_dataset.get_index_in_class(class_)])
+
+
     top, _ = model_adapter.search_tensor(
         test_taskloader,
-        train_dataset.get_index_in_class(class_),
+        support_set,
         class_,
         tqdm_silent=False,
     )
@@ -284,3 +287,44 @@ def plot_score(score, scores_df):
         shadow=True,
         ncol=5,
     )
+
+
+
+class EntropyAdaptater:
+
+    def __init__(self,model):
+        self.model = model
+
+    @torch.no_grad()
+    def search_tensor(
+        self,
+        test_taskloader: torch.utils.data.DataLoader,
+        support_set: torch.Tensor,
+        rare_class_index = None, 
+        tqdm_silent = False,
+    ):
+
+        self.model.eval()
+
+        entropy = []
+        index = []
+        for idx, batch in enumerate(tqdm(test_taskloader,disable=tqdm_silent)):
+
+            query_inputs = batch["img"].to(self.device)
+
+            inputs = torch.cat([support_set.to(self.device), query_inputs])
+
+            ouput = self.model(inputs).softmax(dim=1)
+            
+            batch_entropy = (torch.log(outputs)*outputs).sum(dim=1)
+
+            entropy.append(batch_entropy)
+            index.append(batch["id"].long().to(self.device))
+
+        index = torch.cat(index)
+        entropy = torch.cat(entropy)
+
+        entropy, argsort = torch.sort(entropy, descending=True)
+
+        return index[argsort], entropy
+

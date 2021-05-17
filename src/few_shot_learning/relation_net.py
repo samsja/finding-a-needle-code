@@ -376,7 +376,7 @@ class RelationNetAdaptater(ModuleAdaptater):
         self,
         test_taskloader: torch.utils.data.DataLoader,
         support_set: torch.Tensor,
-        rare_class_index: int,
+        rare_class_index: int, 
         tqdm_silent = False,
     ):
 
@@ -391,8 +391,10 @@ class RelationNetAdaptater(ModuleAdaptater):
             inputs = torch.cat([support_set.to(self.device), query_inputs])
 
             batch_relations = self.model(
-                inputs.to(self.device), self.nb_ep, self.n, self.k, len(query_inputs)
+                inputs.to(self.device), self.nb_ep, support_set.shape[0], self.k, query_inputs.shape[0]
             )[0][0][0]
+
+
             relations.append(batch_relations)
             index.append(batch["id"].long().to(self.device))
 
