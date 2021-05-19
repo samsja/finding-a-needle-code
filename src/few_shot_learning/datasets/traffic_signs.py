@@ -44,7 +44,7 @@ class TrafficSignDataset(FewShotDataSet):
 
         self.classes_indexes = [[] for _ in label_list]
 
-        for fn in tqdm(file_names):
+        for fn in file_names:
             label = fn.split("/")[-2]
             
             label_idx = self.labels_str.index(label)

@@ -199,7 +199,7 @@ def found_new_images(
         test_taskloader,
         support_set,
         class_,
-        tqdm_silent=False,
+        tqdm_silent=True,
     )
     topX = top[:top_to_select][:, 0]
 

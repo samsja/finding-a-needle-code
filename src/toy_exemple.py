@@ -74,7 +74,7 @@ def train_custom_loss(model, data, labels, lr=1e-2, epochs=100, callback=None):
 
         for class_, count in enumerate(distrib):
 
-            loss += loss_fn(outputs[labels == class_], labels[labels == class_]) / count
+            loss += loss_fn(outputs[labels == class_], labels[labels == class_])* ( sum(distrib)/ count)
 
         loss.backward()
         optim.step()
