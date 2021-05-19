@@ -310,13 +310,11 @@ class EntropyAdaptater:
         index = []
         for idx, batch in enumerate(tqdm(test_taskloader,disable=tqdm_silent)):
 
-            query_inputs = batch["img"].to(self.device)
-
-            inputs = torch.cat([support_set.to(self.device), query_inputs])
+            inputs = batch["img"].to(self.device)
 
             ouput = self.model(inputs).softmax(dim=1)
             
-            batch_entropy = (torch.log(outputs)*outputs).sum(dim=1)
+            batch_entropy = -(torch.log(outputs)*outputs).sum(dim=1)
 
             entropy.append(batch_entropy)
             index.append(batch["id"].long().to(self.device))
