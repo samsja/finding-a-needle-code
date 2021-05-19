@@ -146,6 +146,7 @@ def exp_active_loop(
         "TP": [],
         "FN": [],
         "FP": [],
+        "train_size": [],
     }
 
     for run_id in tqdm(range(number_of_runs)):
@@ -164,21 +165,22 @@ def exp_active_loop(
             test_dataset, num_workers=10, batch_size=batch_size
         )
 
-        resnet_model = StandardNet(len(train_dataset.classes))
-        resnet_model = resnet_model.to(device)
-        resnet_adapt = StandardNetAdaptater(resnet_model, device)
-        trainer = TrainerFewShot(resnet_adapt, device, checkpoint=True)
-
-        optim_resnet = torch.optim.Adam(resnet_model.parameters(), lr=lr)
-
-        scheduler_resnet = torch.optim.lr_scheduler.StepLR(
-            optim_resnet, step_size=100, gamma=0.9
-        )
-
-        if model_adapter_search is None:
-            model_adapter_search = resnet_adapt
-
         for i in tqdm(range(episodes)):
+
+            resnet_model = StandardNet(len(train_dataset.classes))
+            resnet_model = resnet_model.to(device)
+            resnet_adapt = StandardNetAdaptater(resnet_model, device)
+            trainer = TrainerFewShot(resnet_adapt, device, checkpoint=True)
+
+            optim_resnet = torch.optim.Adam(resnet_model.parameters(), lr=lr)
+
+            scheduler_resnet = torch.optim.lr_scheduler.StepLR(
+                optim_resnet, step_size=100, gamma=0.9
+            )
+
+            if model_adapter_search is None:
+                model_adapter_search = resnet_adapt
+
 
             train_and_search(
                 mask,
@@ -238,6 +240,9 @@ def exp_active_loop(
                 scores["iteration"].append(i)
                 scores["run_id"].append(run_id)
                 scores["acc"].append(accuracy)
+
+                scores["train_size"].append(train_dataset.get_index_in_class(class_).shape[0]) 
+                
 
     scores_df = pd.DataFrame(scores)
     scores_df["f_score"] = (scores_df["precision"] + scores_df["recall"]) / 2

@@ -207,7 +207,7 @@ def found_new_images(
 
     for data in topX:
 
-        class_data = test_taskloader.dataset[data]["label"]
+        class_data = test_taskloader.dataset[data]["label"].item()
 
         if class_data not in datapoint_to_add.keys():
             datapoint_to_add[class_data] = [data]
@@ -235,7 +235,7 @@ def train_and_search(
     only_true_image=True,
     checkpoint=False,
     nb_of_eval=1,
-    search=False,
+    search=True,
   
 ):
 
@@ -255,6 +255,7 @@ def train_and_search(
 
     if search:
         class_to_rebalanced = mask
+
 
         for class_ in class_to_rebalanced:
             datapoint_to_add = found_new_images(
