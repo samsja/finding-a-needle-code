@@ -103,7 +103,6 @@ def train_normal_loss(model, data, labels, lr=1e-2, epochs=100, callback=None):
                 max_epochs=epochs,
             )
 
-    print(lr)
     return model
 
 
@@ -133,3 +132,51 @@ def boxplot_proba_few_shot(model, X, y, device):
 
     plt.boxplot([outputs[y == 0][:, 0].to("cpu"), outputs[y != 0][:, 0].to("cpu")])
     plt.title("Probability that point belongs to the class with few shot")
+
+
+import sympy as sp
+
+class SymbolicNN:
+    def __init__(self, N):
+
+        self.N = N
+
+        self.w = []
+        self.b = []
+
+        for i in range(self.N):
+            self.w.append(sp.Symbol(f"w_{i}"))
+            self.b.append(sp.Symbol(f"b_{i}"))
+
+    def a(self, x, i, mu):
+        return self.w[i] * x[mu] + self.b[i]
+
+    def o(self, x, i, mu):
+        return sp.exp(self.a(x, i, mu)) / (
+            sum(sp.exp(self.a(x, j, mu)) for j in range(self.N))
+        )
+
+    def loss(self, x):
+        return -sum([sp.log(self.o(x, mu, mu)) for mu in range(self.N)])
+
+    def loss_w(self, x, weight):
+        return -sum([weight[mu] * sp.log(self.o(x, mu, mu)) for mu in range(self.N)])
+
+    def regul(self):
+        return sp.sqrt(sum([w * w for w in self.w]))
+
+    def loss_regul(self, x):
+        return self.loss(x) + self.regul()
+
+    def accuracy(self, x, y, w, b):
+
+        if self.N != 2:
+            raise NotImplementedError("N should be equal to ")
+
+        subs = {model.w[i]: w[i] for i in range(len(model.w))}
+        subs.update({model.b[i]: b[i] for i in range(len(model.b))})
+
+        def acc(mu):
+            return 1 if (self.o(x, mu, mu) > self.o(x, 1 - mu, mu)).subs(subs) else 0
+
+        return sum([acc(y) for y in Y])

@@ -133,6 +133,8 @@ def exp_active_loop(
     init_dataset,
     batch_size,
     model_adapter_search=None,
+    search=True,
+    nb_of_eval=1,
 ):
     scores = {
         "class": [],
@@ -191,8 +193,8 @@ def exp_active_loop(
                 top_to_select=top_to_select,
                 treshold=1,
                 checkpoint=True,
-                nb_of_eval=1,
-                search=True,
+                nb_of_eval=nb_of_eval,
+                search=search,
             )
 
             outputs, true_labels = trainer.get_all_outputs(val_loader, silent=True)
