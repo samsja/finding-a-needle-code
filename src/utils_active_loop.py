@@ -7,7 +7,7 @@ import torchvision
 import numpy as np
 from tqdm.autonotebook import tqdm
 from src.few_shot_learning.standard_net import StandardNet, StandardNetAdaptater
-from src.utils_search import prepare_dataset, train_and_search
+from src.utils_search import prepare_dataset, train_and_search, EntropyAdaptater
 
 import pickle
 
@@ -112,14 +112,39 @@ def init_dataset(path_data, class_to_search_on, support_filenames, N=1):
                 for i in range(N)
             ]
         else:
-            support_index[class_] = support_filenames[class_.item()]
+            support_index[class_.item()] = support_filenames[class_.item()]
 
     for class_ in support_index.keys():
+ 
         prepare_dataset(
             class_, support_index[class_], train_dataset, test_dataset, remove=True
         )
     return train_dataset, eval_dataset, test_dataset
 
+
+from src.few_shot_learning import RelationNet, RelationNetAdaptater
+from src.few_shot_learning.relation_net import (
+    BasicRelationModule,
+    ResNetEmbeddingModule,
+)
+def get_relation_net(deivce):
+    search_model = RelationNet(
+    in_channels=3,
+    out_channels=64,
+    embedding_module=ResNetEmbeddingModule(
+        pretrained_backbone=resnet18(pretrained=True)
+    ),
+    # embedding_module = ResNetEmbeddingModule(pretrained_backbone=resnet_model),
+    relation_module=BasicRelationModule(input_size=512, linear_size=512),
+    device=device,
+    debug=True,
+    merge_operator="mean",
+    ).to(device)
+
+    search_model.load_state_dict(torch.load("data/results/active_loop/relation_net_model.pkl"))
+    search_adaptater_relation_net = RelationNetAdaptater(search_model,1,1,1,1,device)
+
+    return search_adaptater_relation_net 
 
 def exp_active_loop(
     N,
@@ -180,7 +205,15 @@ def exp_active_loop(
 
             if model_adapter_search is None:
                 model_adapter_search = resnet_adapt
+  
+            elif model_adapter_search == "StandardNet":
+                model_adapter_search = resnet_adapt
 
+            elif model_adapter_search == "RelationNet":
+                model_adapter_search = get_relation_net(device)
+            
+            elif model_adapter_search == "Entropy":
+                model_adapter_search = EntropyAdaptater(resnet_model,device)
 
             train_and_search(
                 mask,
@@ -248,3 +281,5 @@ def exp_active_loop(
     scores_df["f_score"] = (scores_df["precision"] + scores_df["recall"]) / 2
 
     return scores_df
+
+

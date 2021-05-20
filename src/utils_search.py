@@ -293,8 +293,9 @@ def plot_score(score, scores_df):
 
 class EntropyAdaptater:
 
-    def __init__(self,model):
+    def __init__(self,model,device):
         self.model = model
+        self.device = device
 
     @torch.no_grad()
     def search_tensor(
@@ -313,7 +314,7 @@ class EntropyAdaptater:
 
             inputs = batch["img"].to(self.device)
 
-            ouput = self.model(inputs).softmax(dim=1)
+            outputs = self.model(inputs).softmax(dim=1)
             
             batch_entropy = -(torch.log(outputs)*outputs).sum(dim=1)
 
