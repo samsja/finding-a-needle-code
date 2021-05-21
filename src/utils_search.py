@@ -16,7 +16,7 @@ from src.utils_plot import img_from_tensor, imshow, plot_list
 
 
 def prepare_dataset(
-    class_to_search_for, idx_support, train_dataset, test_dataset, remove=False
+    class_to_search_for, idx_support, train_dataset, test_dataset, remove=False,limit_search=None
 ):
 
     index_in_class = train_dataset.get_index_in_class(class_to_search_for)
@@ -59,7 +59,13 @@ def prepare_dataset(
             idx_support
         ), f"something wrong with class length {class_to_search_for}"
 
-
+    if limit_search is not None:
+        
+        idx_to_remove = test_dataset.get_index_in_class(class_to_search_for)[:-limit_search].tolist()
+        test_dataset.remove_datapoints(idx_to_remove)
+        test_dataset.update_classes_indexes()
+        
+        
 def count_in_top(top, class_, test_dataset):
     top_labels = [test_dataset[idx]["label"].item() for idx in top]
     return top_labels.count(class_)
@@ -235,8 +241,7 @@ def train_and_search(
     only_true_image=True,
     checkpoint=True,
     nb_of_eval=1,
-    search=True,
-  
+    search=True,  
 ):
 
     trainer.fit(
@@ -248,7 +253,6 @@ def train_and_search(
         val_loader,
         silent=False,    
     )
-
     if checkpoint:
         trainer.model_adaptater.model = trainer.model_checkpoint
 

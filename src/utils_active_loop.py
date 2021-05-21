@@ -68,7 +68,7 @@ def init_few_shot_dataset(train_dataset, class_to_search_on):
     return few_shot_taskloader
 
 
-def init_dataset(path_data, class_to_search_on, support_filenames, N=1):
+def init_dataset(path_data, class_to_search_on, support_filenames, N=1,limit_search=None):
 
     transform, transform_test = get_transform()
 
@@ -117,7 +117,7 @@ def init_dataset(path_data, class_to_search_on, support_filenames, N=1):
     for class_ in support_index.keys():
  
         prepare_dataset(
-            class_, support_index[class_], train_dataset, test_dataset, remove=True
+            class_, support_index[class_], train_dataset, test_dataset, remove=True,limit_search=limit_search,
         )
     return train_dataset, eval_dataset, test_dataset
 
@@ -170,7 +170,7 @@ def exp_active_loop(
     batch_size,
     model_adapter_search=None,
     search=True,
-    nb_of_eval=1,
+    nb_of_eval=1, 
 ):
 
     scores = {
@@ -183,6 +183,7 @@ def exp_active_loop(
         "TP": [],
         "FN": [],
         "FP": [],
+        "f_score":[],
         "train_size": [],
     }
 
@@ -254,7 +255,6 @@ def exp_active_loop(
                     zero_division=0,
                 )
             )
-
             recall = torch.Tensor(
                 metrics.recall_score(
                     true_labels.to("cpu"),
@@ -264,6 +264,14 @@ def exp_active_loop(
                 )
             )
 
+            f_score = torch.Tensor(
+                metrics.f1_score(
+                    true_labels.to("cpu"),
+                    outputs.to("cpu"),
+                    average=None,
+                    zero_division=0,
+                )
+            )
             accuracy = metrics.accuracy_score(true_labels.to("cpu"), outputs.to("cpu"))
 
             cf_matrix = torch.Tensor(
@@ -274,6 +282,7 @@ def exp_active_loop(
             FN = cf_matrix.sum(axis=1) - np.diag(cf_matrix)
             TP = np.diag(cf_matrix)
 
+
             for class_ in mask:
                 class_ = class_.item()
                 scores["class"].append(class_)
@@ -282,6 +291,7 @@ def exp_active_loop(
                 scores["TP"].append(TP[class_].item())
                 scores["FN"].append(FN[class_].item())
                 scores["FP"].append(FP[class_].item())
+                scores["f_score"].append(f_score[class_].item()) 
                 scores["iteration"].append(i)
                 scores["run_id"].append(run_id)
                 scores["acc"].append(accuracy)
@@ -290,7 +300,7 @@ def exp_active_loop(
                 
 
     scores_df = pd.DataFrame(scores)
-    scores_df["f_score"] = (scores_df["precision"] + scores_df["recall"]) / 2
+
 
     return scores_df
 
