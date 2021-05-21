@@ -368,7 +368,6 @@ class RelationNetAdaptater(ModuleAdaptater):
             accuracy = (
                 (outputs.argmax(dim=1) == self.targets.argmax(dim=1)).float().mean()
             )
-
         return loss, accuracy
 
     @torch.no_grad()

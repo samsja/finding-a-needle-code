@@ -77,6 +77,7 @@ class StandardNetAdaptater(ModuleAdaptater):
 
         if accuracy:
             _, preds = torch.max(outputs, 1)
+            #print((preds==25).float().sum())
             return loss, (preds == labels).float().mean()
 
         else:

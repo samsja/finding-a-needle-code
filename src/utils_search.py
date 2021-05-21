@@ -233,7 +233,7 @@ def train_and_search(
     top_to_select=1,
     treshold=0.5,
     only_true_image=True,
-    checkpoint=False,
+    checkpoint=True,
     nb_of_eval=1,
     search=True,
   

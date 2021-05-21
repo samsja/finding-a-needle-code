@@ -15,7 +15,7 @@ from src.few_shot_learning.datasets import TrafficSignDataset
 from src.few_shot_learning.utils_train import TrainerFewShot
 
 from src.few_shot_learning import FewShotSampler2
-
+from torchvision.models import resnet18
 
 def get_transform():
     transform = torchvision.transforms.Compose(
@@ -127,7 +127,7 @@ from src.few_shot_learning.relation_net import (
     BasicRelationModule,
     ResNetEmbeddingModule,
 )
-def get_relation_net(deivce):
+def get_relation_net(device):
     search_model = RelationNet(
     in_channels=3,
     out_channels=64,
@@ -146,6 +146,17 @@ def get_relation_net(deivce):
 
     return search_adaptater_relation_net 
 
+
+
+def print_param(f):
+    def f2(*args,**kwargs):
+        print(args)
+        print(kwargs)
+        return f(*args,**kwargs)
+    return f2
+
+
+#@print_param
 def exp_active_loop(
     N,
     mask,
@@ -161,6 +172,7 @@ def exp_active_loop(
     search=True,
     nb_of_eval=1,
 ):
+
     scores = {
         "class": [],
         "iteration": [],
