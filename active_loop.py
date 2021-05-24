@@ -14,6 +14,7 @@ if __name__ == "__main__":
     parser.add_argument("-N",default=1,type=int)
     parser.add_argument("--top",default=50,type=int)
     parser.add_argument("--result_file",type=str)
+    parser.add_argument("--limit_search",default=None,type=int)
 
 
     args = parser.parse_args()
@@ -47,7 +48,7 @@ if __name__ == "__main__":
     epochs_step = [20] * episodes
     lr = 1e-3
 
-    init_data = lambda: init_dataset(path_data, class_to_search_on, support_filenames, N=N)
+    init_data = lambda: init_dataset(path_data, class_to_search_on, support_filenames, N=N,limit_search=args.limit_search)
 
     scores_df = exp_active_loop(
         N,
