@@ -50,6 +50,8 @@ if __name__ == "__main__":
 
     init_data = lambda: init_dataset(path_data, class_to_search_on, support_filenames, N=N,limit_search=args.limit_search)
 
+    #breakpoint()
+
     scores_df = exp_active_loop(
         N,
         mask,
@@ -63,7 +65,7 @@ if __name__ == "__main__":
         batch_size,
         args.model,
         search=True,
-        nb_of_eval=1
+        nb_of_eval=20
     )
 
     scores_df.to_pickle(args.result_file)
