@@ -332,3 +332,24 @@ class EntropyAdaptater:
 
         return index[argsort], entropy
 
+class RandomAdaptater:
+
+    def __init__(self,model,device):
+        self.device = device
+        self.model = model
+
+    @torch.no_grad()
+    def search_tensor(
+        self,
+        test_taskloader: torch.utils.data.DataLoader,
+        support_set: torch.Tensor,
+        rare_class_index = None, 
+        tqdm_silent = False,
+    ):
+
+
+        index = torch.randperm(len(test_taskloader.dataset)).long().unsqueeze(dim=1)
+        value = torch.zeros(len(test_taskloader.dataset)).float()
+        
+        return index, value
+

@@ -7,7 +7,7 @@ import torchvision
 import numpy as np
 from tqdm.autonotebook import tqdm
 from src.few_shot_learning.standard_net import StandardNet, StandardNetAdaptater
-from src.utils_search import prepare_dataset, train_and_search, EntropyAdaptater
+from src.utils_search import prepare_dataset, train_and_search, EntropyAdaptater,RandomAdaptater
 
 import pickle
 
@@ -17,11 +17,12 @@ from src.few_shot_learning.utils_train import TrainerFewShot
 from src.few_shot_learning import FewShotSampler2
 from torchvision.models import resnet18
 
+
 def get_transform():
     transform = torchvision.transforms.Compose(
         [
             torchvision.transforms.Resize(145),
-            torchvision.transforms.RandomCrop(128)  ,
+            torchvision.transforms.RandomCrop(128),
             torchvision.transforms.ToTensor(),
             torchvision.transforms.Normalize(
                 mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
@@ -68,23 +69,23 @@ def init_few_shot_dataset(train_dataset, class_to_search_on):
     return few_shot_taskloader
 
 
-def init_dataset(path_data, class_to_search_on, support_filenames, N=1,limit_search=None):
+def init_dataset(
+    path_data, class_to_search_on, support_filenames, N=1, limit_search=None
+):
 
-   
     transform, transform_test = get_transform()
 
-    with open('src/pickles/traineval_incl_partial.pkl', 'rb') as f:
+    with open("src/pickles/traineval_incl_partial.pkl", "rb") as f:
         train_eval = pickle.load(f)
         train_eval = [x for x in train_eval if "partial" not in x]
 
-    with open('src/pickles/test_incl_partial.pkl', 'rb') as f:
+    with open("src/pickles/test_incl_partial.pkl", "rb") as f:
         test = pickle.load(f)
         test = [x for x in test if "partial" not in x]
 
-    with open('src/pickles/class_list.pkl', 'rb') as f:
+    with open("src/pickles/class_list.pkl", "rb") as f:
         label_list = pickle.load(f)
         train_, val_ = [], []
-    
 
     for c in label_list:
         fns = [x for x in test if c + "/" in x]
@@ -116,9 +117,14 @@ def init_dataset(path_data, class_to_search_on, support_filenames, N=1,limit_sea
             support_index[class_.item()] = support_filenames[class_.item()]
 
     for class_ in support_index.keys():
- 
+
         prepare_dataset(
-            class_, support_index[class_], train_dataset, test_dataset, remove=True,limit_search=limit_search,
+            class_,
+            support_index[class_],
+            train_dataset,
+            test_dataset,
+            remove=True,
+            limit_search=limit_search,
         )
     return train_dataset, eval_dataset, test_dataset
 
@@ -128,36 +134,42 @@ from src.few_shot_learning.relation_net import (
     BasicRelationModule,
     ResNetEmbeddingModule,
 )
+
+
 def get_relation_net(device):
     search_model = RelationNet(
-    in_channels=3,
-    out_channels=64,
-    embedding_module=ResNetEmbeddingModule(
-        pretrained_backbone=resnet18(pretrained=True)
-    ),
-    # embedding_module = ResNetEmbeddingModule(pretrained_backbone=resnet_model),
-    relation_module=BasicRelationModule(input_size=512, linear_size=512),
-    device=device,
-    debug=True,
-    merge_operator="mean",
+        in_channels=3,
+        out_channels=64,
+        embedding_module=ResNetEmbeddingModule(
+            pretrained_backbone=resnet18(pretrained=True)
+        ),
+        # embedding_module = ResNetEmbeddingModule(pretrained_backbone=resnet_model),
+        relation_module=BasicRelationModule(input_size=512, linear_size=512),
+        device=device,
+        debug=True,
+        merge_operator="mean",
     ).to(device)
 
-    search_model.load_state_dict(torch.load("data/results/active_loop/relation_net_model.pkl"))
-    search_adaptater_relation_net = RelationNetAdaptater(search_model,1,1,1,1,device)
+    search_model.load_state_dict(
+        torch.load("data/results/active_loop/relation_net_model.pkl")
+    )
+    search_adaptater_relation_net = RelationNetAdaptater(
+        search_model, 1, 1, 1, 1, device
+    )
 
-    return search_adaptater_relation_net 
-
+    return search_adaptater_relation_net
 
 
 def print_param(f):
-    def f2(*args,**kwargs):
+    def f2(*args, **kwargs):
         print(args)
         print(kwargs)
-        return f(*args,**kwargs)
+        return f(*args, **kwargs)
+
     return f2
 
 
-#@print_param
+# @print_param
 def exp_active_loop(
     N,
     mask,
@@ -171,7 +183,7 @@ def exp_active_loop(
     batch_size,
     model_adapter_search=None,
     search=True,
-    nb_of_eval=1, 
+    nb_of_eval=1,
 ):
 
     scores = {
@@ -184,7 +196,7 @@ def exp_active_loop(
         "TP": [],
         "FN": [],
         "FP": [],
-        "f_score":[],
+        "f_score": [],
         "train_size": [],
     }
 
@@ -219,16 +231,19 @@ def exp_active_loop(
 
             if model_adapter_search is None:
                 model_adapter_search = resnet_adapt
-  
+
             elif model_adapter_search == "StandardNet":
                 model_adapter_search = resnet_adapt
 
             elif model_adapter_search == "RelationNet":
                 model_adapter_search = get_relation_net(device)
-            
-            elif model_adapter_search == "Entropy":
-                model_adapter_search = EntropyAdaptater(resnet_model,device)
 
+            elif model_adapter_search == "Entropy":
+                model_adapter_search = EntropyAdaptater(resnet_model, device)
+
+            elif model_adapter_search == "Random":
+                model_adapter_search = RandomAdaptater(resnet_model,device)
+            
             train_and_search(
                 mask,
                 epochs_step[i],
@@ -283,7 +298,6 @@ def exp_active_loop(
             FN = cf_matrix.sum(axis=1) - np.diag(cf_matrix)
             TP = np.diag(cf_matrix)
 
-
             for class_ in mask:
                 class_ = class_.item()
                 scores["class"].append(class_)
@@ -292,17 +306,15 @@ def exp_active_loop(
                 scores["TP"].append(TP[class_].item())
                 scores["FN"].append(FN[class_].item())
                 scores["FP"].append(FP[class_].item())
-                scores["f_score"].append(f_score[class_].item()) 
+                scores["f_score"].append(f_score[class_].item())
                 scores["iteration"].append(i)
                 scores["run_id"].append(run_id)
                 scores["acc"].append(accuracy)
 
-                scores["train_size"].append(train_dataset.get_index_in_class(class_).shape[0]) 
-                
+                scores["train_size"].append(
+                    train_dataset.get_index_in_class(class_).shape[0]
+                )
 
     scores_df = pd.DataFrame(scores)
 
-
     return scores_df
-
-
