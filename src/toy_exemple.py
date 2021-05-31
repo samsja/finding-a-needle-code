@@ -4,7 +4,7 @@ import torch.nn as nn
 import numpy as np
 from sklearn.datasets import make_blobs, make_moons
 import matplotlib.pyplot as plt
-
+from tqdm.auto import tqdm
 
 def make_blob_torch(n_samples,centers,cluster_std,random_state,ratio,device):
     X, y = make_blobs_few_shot(
@@ -64,7 +64,7 @@ def train_custom_loss(model, data, labels, lr=1e-2, epochs=100, callback=None):
     loss_fn = nn.CrossEntropyLoss()
     optim = torch.optim.SGD(model.parameters(), lr=lr)
 
-    for _ in range(epochs):
+    for _ in tqdm(range(epochs)):
 
         model.zero_grad()
         outputs = model(data)
@@ -86,7 +86,7 @@ def train_normal_loss(model, data, labels, lr=1e-2, epochs=100, callback=None):
     loss_fn = nn.CrossEntropyLoss()
     optim = torch.optim.SGD(model.parameters(), lr=lr,momentum=0.9)
 
-    for idx_epoch in range(epochs):
+    for idx_epoch in tqdm(range(epochs)):
 
         model.zero_grad()
         outputs = model(data)
@@ -171,7 +171,7 @@ class SymbolicNN:
     def accuracy(self, x, y, w, b):
 
         if self.N != 2:
-            raise NotImplementedError("N should be equal to ")
+            raise NotImplementedError("N should be equal to 2 ")
 
         subs = {model.w[i]: w[i] for i in range(len(model.w))}
         subs.update({model.b[i]: b[i] for i in range(len(model.b))})
