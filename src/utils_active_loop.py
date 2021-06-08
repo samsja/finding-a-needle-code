@@ -184,6 +184,7 @@ def exp_active_loop(
     model_adapter_search=None,
     search=True,
     nb_of_eval=1,
+    callback= None,
 ):
 
     scores = {
@@ -314,6 +315,9 @@ def exp_active_loop(
                 scores["train_size"].append(
                     train_dataset.get_index_in_class(class_).shape[0]
                 )
+
+    if callback is not None:
+        callback(resnet_model,train_dataset,eval_dataset,test_dataset)
 
     scores_df = pd.DataFrame(scores)
 
