@@ -15,6 +15,8 @@ import datashader.transfer_functions as tf
 import torch
 
 from tqdm.auto import tqdm
+import numpy as np
+
 def get_features_and_label(dataloader,feature_extractor,device):
     features = []
     labels = []
@@ -85,3 +87,23 @@ def plot_bokeh(df,reducer,labels):
     p = umap.plot.interactive(reducer, labels=labels, hover_data=df, point_size=2)
     umap.plot.output_notebook()
     umap.plot.show(p)
+
+
+def get_features_labels_on_rare_class(dataset,class_to_search_on,feature_extractor,device) :
+    with torch.no_grad():
+        features_val = []
+        labels_val = []
+        for class_ in class_to_search_on:
+            for idx in dataset.get_index_in_class(class_):
+                features_val.append(feature_extractor(dataset[idx]["img"].to(device).unsqueeze(dim=0)))
+                labels_val.append(dataset[idx]["label"].item())
+
+        features_val = torch.cat(features_val)
+        labels_val = np.array(labels_val)
+    
+    return features_val,labels_val
+
+def create_df(umap_data, labels):
+    df = pd.DataFrame(umap_data, columns=("x", "y"))
+    df["class"] = pd.Series(labels)
+    return df

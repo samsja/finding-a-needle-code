@@ -1,0 +1,3 @@
+git+https://github.com/y0ast/DUE.git
+umap-learn[plot] 
+datashader
