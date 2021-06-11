@@ -43,7 +43,7 @@ def get_transform():
     return transform, transform_test
 
 
-def init_few_shot_dataset(train_dataset, class_to_search_on):
+def init_few_shot_dataset(train_dataset, class_to_search_on,num_workers=5):
 
     train_few_shot_dataset = TrafficSignDataset(
         train_dataset.data,
@@ -63,7 +63,7 @@ def init_few_shot_dataset(train_dataset, class_to_search_on):
     )
 
     few_shot_taskloader = torch.utils.data.DataLoader(
-        train_few_shot_dataset, batch_sampler=few_shot_sampler, num_workers=5
+        train_few_shot_dataset, batch_sampler=few_shot_sampler, num_workers=num_workers
     )
 
     return few_shot_taskloader
@@ -185,6 +185,7 @@ def exp_active_loop(
     search=True,
     nb_of_eval=1,
     callback= None,
+    num_workers = 4,
 ):
 
     scores = {
@@ -206,15 +207,15 @@ def exp_active_loop(
         train_dataset, eval_dataset, test_dataset = init_dataset()
 
         train_loader = torch.utils.data.DataLoader(
-            train_dataset, shuffle=True, num_workers=4, batch_size=batch_size
+            train_dataset, shuffle=True, num_workers=num_workers, batch_size=batch_size
         )
 
         val_loader = torch.utils.data.DataLoader(
-            eval_dataset, shuffle=True, batch_size=batch_size, num_workers=4
+            eval_dataset, shuffle=True, batch_size=batch_size, num_workers=num_workers
         )
 
         test_taskloader = torch.utils.data.DataLoader(
-            test_dataset, num_workers=10, batch_size=batch_size
+            test_dataset, num_workers=num_workers, batch_size=batch_size
         )
 
         for i in tqdm(range(episodes)):
