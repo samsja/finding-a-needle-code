@@ -20,6 +20,7 @@ import numpy as np
 def get_features_and_label(dataloader,feature_extractor,device):
     features = []
     labels = []
+    url = []
 
     with torch.no_grad():
 
@@ -38,13 +39,15 @@ def get_features_and_label(dataloader,feature_extractor,device):
             features.append(batch_features)
             labels.append(batch["label"].to(device))
 
+            url = url +  [dataloader.dataset.data[idx[0].int().item()] for idx in batch["id"]]
+
         features = torch.cat(features)
         labels = torch.cat(labels)
 
         features_np = features.to("cpu").numpy()
         labels_np = labels.to("cpu").numpy()
 
-    return features_np, labels_np
+    return features_np, labels_np,url
 
 
 def prepare_to_plot(umap_2d,labels,labels_test):
@@ -91,19 +94,23 @@ def plot_bokeh(df,reducer,labels):
 
 def get_features_labels_on_rare_class(dataset,class_to_search_on,feature_extractor,device) :
     with torch.no_grad():
+        url = []
         features_val = []
         labels_val = []
         for class_ in class_to_search_on:
             for idx in dataset.get_index_in_class(class_):
                 features_val.append(feature_extractor(dataset[idx]["img"].to(device).unsqueeze(dim=0)))
                 labels_val.append(dataset[idx]["label"].item())
+                url.append(dataset.data[idx.int().item()])
+
 
         features_val = torch.cat(features_val)
         labels_val = np.array(labels_val)
     
-    return features_val,labels_val
+    return features_val,labels_val,url
 
-def create_df(umap_data, labels):
+def create_df(umap_data, labels,url):
     df = pd.DataFrame(umap_data, columns=("x", "y"))
     df["class"] = pd.Series(labels)
+    df["url"] = pd.Series(url)
     return df
