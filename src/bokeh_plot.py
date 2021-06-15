@@ -34,8 +34,8 @@ if "bokeh_app" in __name__ or __name__ == "__main__":
 
     mapper = bokeh.transform.linear_cmap(field_name='class_color', palette=Category10[6] ,low=0 ,high=len(df_plot["class"].unique()))
 
-    plot.circle(
-        source=df_plot[df_plot["type"] == "train"],color=mapper,
+    plot.star(
+        source=df_plot[df_plot["type"] == "train"],color=mapper,size=20
     )
 
     plot.square(
