@@ -108,6 +108,8 @@ def train_normal_loss(model, data, labels, lr=1e-2, epochs=100, callback=None):
 
 def vizu(model, X, y, device, figsize=(17, 7)):
     h = 0.05
+    X = X.to("cpu")
+    y = y.to("cpu") 
     x_min, x_max = X[:, 0].min() - 1, X[:, 0].max() + 1
     y_min, y_max = X[:, 1].min() - 1, X[:, 1].max() + 1
     xx, yy = np.meshgrid(np.arange(x_min, x_max, h), np.arange(y_min, y_max, h))
