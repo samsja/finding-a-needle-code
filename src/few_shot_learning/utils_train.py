@@ -226,6 +226,35 @@ class TrainerFewShot:
 
         return outputs,true_labels
 
+    def get_all_preds(
+        self, task_loader: torch.utils.data.DataLoader, silent=False
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        
+        """
+        return :
+            preds: torch.Tensor, the pred of the model for the task loader
+            true_label. torch.Tesnor, the true labels for the task loader
+        """
+
+        preds = []
+        true_labels = []
+
+        for batch_idx, batch in enumerate(tqdm(task_loader,disable=silent)):
+            with torch.no_grad():
+                self.model_adaptater.model.eval()
+
+                inputs, labels = self._get_data_from_batch(batch)
+
+                pred = self.model_adaptater.get_preds(inputs.to(self.device))
+                preds.append(pred)
+                true_labels.append(labels.to(self.device))
+
+        preds = torch.cat(preds)
+        true_labels = torch.cat(true_labels)
+
+        return preds,true_labels
+
+
     def restore_checkpoint(self):
 
         self.model_adaptater.model = self.model_checkpoint

@@ -151,8 +151,7 @@ class SmartStandardNetAdaptater(StandardNetAdaptater):
 
     def _preds(self,outputs):
         out = outputs.detach().to("cpu").clone() # to avoid illegal memroy acces bug
-        balanced_output = self.weight*(out.softmax(dim=1))
-       
+        balanced_output = out.softmax(dim=1)@smart_resnet_adapt.weight.
         _, preds = torch.max(balanced_output, 1)
         return preds
 
