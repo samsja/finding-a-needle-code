@@ -177,15 +177,16 @@ def exp_active_loop(
     number_of_runs,
     top_to_select,
     epochs_step,
+    nb_of_eval,
     lr,
     device,
     init_dataset,
     batch_size,
     model_adapter_search=None,
     search=True,
-    nb_of_eval=1,
     callback= None,
     num_workers = 4,
+    retrain = True,
 ):
 
     scores = {
@@ -220,16 +221,17 @@ def exp_active_loop(
 
         for i in tqdm(range(episodes)):
 
-            resnet_model = StandardNet(len(train_dataset.classes))
-            resnet_model = resnet_model.to(device)
-            resnet_adapt = StandardNetAdaptater(resnet_model, device)
-            trainer = TrainerFewShot(resnet_adapt, device, checkpoint=True)
+            if retrain or i == 0:
+                resnet_model = StandardNet(len(train_dataset.classes))
+                resnet_model = resnet_model.to(device)
+                resnet_adapt = StandardNetAdaptater(resnet_model, device)
+                trainer = TrainerFewShot(resnet_adapt, device, checkpoint=True)
 
-            optim_resnet = torch.optim.Adam(resnet_model.parameters(), lr=lr)
+                optim_resnet = torch.optim.Adam(resnet_model.parameters(), lr=lr)
 
-            scheduler_resnet = torch.optim.lr_scheduler.StepLR(
-                optim_resnet, step_size=100, gamma=0.9
-            )
+                scheduler_resnet = torch.optim.lr_scheduler.StepLR(
+                    optim_resnet, step_size=100000, gamma=0.9
+                )
 
             if model_adapter_search is None:
                 model_adapter_search = resnet_adapt
@@ -245,7 +247,9 @@ def exp_active_loop(
 
             elif model_adapter_search == "Random":
                 model_adapter_search = RandomAdaptater(resnet_model,device)
-            
+           
+
+
             train_and_search(
                 mask,
                 epochs_step[i],
@@ -259,7 +263,7 @@ def exp_active_loop(
                 top_to_select=top_to_select,
                 treshold=1,
                 checkpoint=True,
-                nb_of_eval=nb_of_eval,
+                nb_of_eval=nb_of_eval[i],
                 search=search,
             )
 
