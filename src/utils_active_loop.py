@@ -23,6 +23,7 @@ from src.few_shot_learning import FewShotSampler2
 from torchvision.models import resnet18
 
 from src.few_shot_learning.datasets import FewShotDataSet
+from collections import namedtuple
 
 
 def get_transform():
@@ -50,6 +51,15 @@ def get_transform():
     return transform, transform_test
 
 
+FewShotParam = namedtuple(
+    "FewShotParam",
+    ["number_of_batch", "episodes", "sample_per_class", "classes_per_ep", "queries"],
+)
+
+
+few_shot_param = FewShotParam(5, 1, 1, 50, 8)
+
+
 def init_few_shot_dataset(train_dataset, class_to_search_on, num_workers=5):
 
     train_few_shot_dataset = TrafficSignDataset(
@@ -62,11 +72,11 @@ def init_few_shot_dataset(train_dataset, class_to_search_on, num_workers=5):
 
     few_shot_sampler = FewShotSampler2(
         train_few_shot_dataset,
-        number_of_batch=5,
-        episodes=1,
-        sample_per_class=1,
-        classes_per_ep=50,
-        queries=8,
+        few_shot_param.number_of_batch,
+        few_shot_param.episodes,
+        few_shot_param.sample_per_class,
+        few_shot_param.classes_per_ep,
+        few_shot_param.queries,
     )
 
     few_shot_taskloader = torch.utils.data.DataLoader(
@@ -186,10 +196,12 @@ class NoAdditionalSearcher(Searcher):
 class RelationNetSearcher(Searcher):
 
     lr = 3e-4
-    epochs = 200
+    epochs = 1
     nb_eval = 1
 
-    def __init__(self, device):
+    def __init__(self, device,class_to_search_on):
+
+        self.class_to_search_on = class_to_search_on
 
         self.model = RelationNet(
             in_channels=3,
@@ -205,6 +217,15 @@ class RelationNetSearcher(Searcher):
 
         self.model_adapter = RelationNetAdaptater(self.model, 1, 1, 1, 1, device)
 
+        self.train_model_adapter = RelationNetAdaptater(
+            self.model,
+            few_shot_param.episodes,
+            few_shot_param.sample_per_class,
+            few_shot_param.classes_per_ep,
+            few_shot_param.queries,
+            device,
+        )
+
         self.device = device
 
         self.optim = torch.optim.Adam(
@@ -214,17 +235,19 @@ class RelationNetSearcher(Searcher):
             self.optim, step_size=1000, gamma=0.5
         )
 
-        self.trainer = TrainerFewShot(self.model_adapter, device, checkpoint=False)
+        self.trainer = TrainerFewShot(
+            self.train_model_adapter, device, checkpoint=False
+        )
 
     def train_searcher(
-        self, train_dataset: FewShotDataSet, class_to_search_on, num_workers
+        self, train_dataset: FewShotDataSet,  num_workers
     ):
 
         few_shot_task_loader = init_few_shot_dataset(
-            train_dataset, class_to_search_on, num_workers
+            train_dataset, self.class_to_search_on, num_workers
         )
 
-        trainer.fit(
+        self.trainer.fit(
             RelationNetSearcher.epochs,
             RelationNetSearcher.nb_eval,
             self.optim,
@@ -284,7 +307,10 @@ def exp_active_loop(
         )
 
         if model_adapter_search_param == "RelationNet":
-            model_adapter_search = get_relation_net(device)
+            search_adaptater = RelationNetSearcher(device,class_to_search_on)
+
+        elif model_adapter_search_param == "RelationNetFull":
+            search_adaptater = RelationNetSearcher(device,[])
 
         elif model_adapter_search_param == "Entropy":
             model_adapter_search = EntropyAdaptater(resnet_model, device)
@@ -313,7 +339,7 @@ def exp_active_loop(
                 search_adaptater = NoAdditionalSearcher(model_adapter_search)
 
             search_adaptater.train_searcher(
-                train_dataset, class_to_search_on, num_workers
+                train_dataset, num_workers
             )
 
             train_and_search(
