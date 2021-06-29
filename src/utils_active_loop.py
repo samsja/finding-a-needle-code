@@ -7,7 +7,12 @@ import torchvision
 import numpy as np
 from tqdm.autonotebook import tqdm
 from src.few_shot_learning.standard_net import StandardNet, StandardNetAdaptater
-from src.utils_search import prepare_dataset, train_and_search, EntropyAdaptater,RandomAdaptater
+from src.utils_search import (
+    prepare_dataset,
+    train_and_search,
+    EntropyAdaptater,
+    RandomAdaptater,
+)
 
 import pickle
 
@@ -16,6 +21,8 @@ from src.few_shot_learning.utils_train import TrainerFewShot
 
 from src.few_shot_learning import FewShotSampler2
 from torchvision.models import resnet18
+
+from src.few_shot_learning.datasets import FewShotDataSet
 
 
 def get_transform():
@@ -43,7 +50,7 @@ def get_transform():
     return transform, transform_test
 
 
-def init_few_shot_dataset(train_dataset, class_to_search_on,num_workers=5):
+def init_few_shot_dataset(train_dataset, class_to_search_on, num_workers=5):
 
     train_few_shot_dataset = TrafficSignDataset(
         train_dataset.data,
@@ -57,7 +64,7 @@ def init_few_shot_dataset(train_dataset, class_to_search_on,num_workers=5):
         train_few_shot_dataset,
         number_of_batch=5,
         episodes=1,
-        sample_per_class=5,
+        sample_per_class=1,
         classes_per_ep=50,
         queries=8,
     )
@@ -160,19 +167,76 @@ def get_relation_net(device):
     return search_adaptater_relation_net
 
 
-def print_param(f):
-    def f2(*args, **kwargs):
-        print(args)
-        print(kwargs)
-        return f(*args, **kwargs)
+class Searcher:
+    def train_searcher(
+        self, train_dataset: FewShotDataSet, class_to_search_on, num_workers
+    ):
 
-    return f2
+        raise NotImplementedError
 
 
-# @print_param
+class NoAdditionalSearcher(Searcher):
+    def __init__(self, model_adapter):
+        self.model_adapter = model_adapter
+
+    def train_searcher(self, *args, **kwargs):
+        pass
+
+
+class RelationNetSearcher(Searcher):
+
+    lr = 3e-4
+    epochs = 200
+    nb_eval = 1
+
+    def __init__(self, device):
+
+        self.model = RelationNet(
+            in_channels=3,
+            out_channels=64,
+            embedding_module=ResNetEmbeddingModule(
+                pretrained_backbone=resnet18(pretrained=True)
+            ),
+            relation_module=BasicRelationModule(input_size=512, linear_size=512),
+            device=device,
+            debug=True,
+            merge_operator="mean",
+        ).to(device)
+
+        self.model_adapter = RelationNetAdaptater(self.model, 1, 1, 1, 1, device)
+
+        self.device = device
+
+        self.optim = torch.optim.Adam(
+            self.model.parameters(), lr=RelationNetSearcher.lr
+        )
+        self.scheduler = torch.optim.lr_scheduler.StepLR(
+            self.optim, step_size=1000, gamma=0.5
+        )
+
+        self.trainer = TrainerFewShot(self.model_adapter, device, checkpoint=False)
+
+    def train_searcher(
+        self, train_dataset: FewShotDataSet, class_to_search_on, num_workers
+    ):
+
+        few_shot_task_loader = init_few_shot_dataset(
+            train_dataset, class_to_search_on, num_workers
+        )
+
+        trainer.fit(
+            RelationNetSearcher.epochs,
+            RelationNetSearcher.nb_eval,
+            self.optim,
+            self.scheduler,
+            few_shot_task_loader,
+            few_shot_task_loader,
+        )
+
+
 def exp_active_loop(
     N,
-    mask,
+    class_to_search_on,
     episodes,
     number_of_runs,
     top_to_select,
@@ -182,11 +246,11 @@ def exp_active_loop(
     device,
     init_dataset,
     batch_size,
-    model_adapter_search=None,
+    model_adapter_search_param=None,
     search=True,
-    callback= None,
-    num_workers = 4,
-    retrain = True,
+    callback=None,
+    num_workers=4,
+    retrain=True,
 ):
 
     scores = {
@@ -219,6 +283,17 @@ def exp_active_loop(
             test_dataset, num_workers=num_workers, batch_size=batch_size
         )
 
+        if model_adapter_search_param == "RelationNet":
+            model_adapter_search = get_relation_net(device)
+
+        elif model_adapter_search_param == "Entropy":
+            model_adapter_search = EntropyAdaptater(resnet_model, device)
+            search_adaptater = NoAdditionalSearcher(model_adapter_search)
+
+        elif model_adapter_search_param == "Random":
+            model_adapter_search = RandomAdaptater(resnet_model, device)
+            search_adaptater = NoAdditionalSearcher(model_adapter_search)
+
         for i in tqdm(range(episodes)):
 
             if retrain or i == 0:
@@ -233,25 +308,16 @@ def exp_active_loop(
                     optim_resnet, step_size=100000, gamma=0.9
                 )
 
-            if model_adapter_search is None:
+            if model_adapter_search_param in [None, "StandardNet"]:
                 model_adapter_search = resnet_adapt
+                search_adaptater = NoAdditionalSearcher(model_adapter_search)
 
-            elif model_adapter_search == "StandardNet":
-                model_adapter_search = resnet_adapt
-
-            elif model_adapter_search == "RelationNet":
-                model_adapter_search = get_relation_net(device)
-
-            elif model_adapter_search == "Entropy":
-                model_adapter_search = EntropyAdaptater(resnet_model, device)
-
-            elif model_adapter_search == "Random":
-                model_adapter_search = RandomAdaptater(resnet_model,device)
-           
-
+            search_adaptater.train_searcher(
+                train_dataset, class_to_search_on, num_workers
+            )
 
             train_and_search(
-                mask,
+                class_to_search_on,
                 epochs_step[i],
                 train_loader,
                 val_loader,
@@ -259,7 +325,7 @@ def exp_active_loop(
                 trainer,
                 optim_resnet,
                 scheduler_resnet,
-                model_adapter_search,
+                search_adaptater.model_adapter,
                 top_to_select=top_to_select,
                 treshold=1,
                 checkpoint=True,
@@ -304,7 +370,7 @@ def exp_active_loop(
             FN = cf_matrix.sum(axis=1) - np.diag(cf_matrix)
             TP = np.diag(cf_matrix)
 
-            for class_ in mask:
+            for class_ in class_to_search_on:
                 class_ = class_.item()
                 scores["class"].append(class_)
                 scores["precision"].append(precision[class_].item())
@@ -322,7 +388,7 @@ def exp_active_loop(
                 )
 
     if callback is not None:
-        callback(resnet_model,train_dataset,eval_dataset,test_dataset)
+        callback(resnet_model, train_dataset, eval_dataset, test_dataset)
 
     scores_df = pd.DataFrame(scores)
 
