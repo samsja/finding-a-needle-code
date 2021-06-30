@@ -96,8 +96,8 @@ class UnBalancedSampler(FewShotDataSet):
     def __init__(self):
         super().__init__()
 
-        self._classes = torch.arange(2)
-        self._length_of_class = torch.Tensor([1,100]).long()
+        self._classes = torch.arange(5)
+        self._length_of_class = torch.Tensor([1,100,5,10,2]).long()
 
     def __getitm__(self, idx):
         return (torch.zeros((10, 10)), 0)
@@ -111,7 +111,7 @@ class UnBalancedSampler(FewShotDataSet):
 
         """
         return torch.arange(
-            class_idx * self._length_of_class,
+            class_idx * self._length_of_class[class_idx],
             (class_idx + 1) * self._length_of_class[class_idx],
             dtype=torch.long,
         )
