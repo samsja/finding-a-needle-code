@@ -46,11 +46,11 @@ if __name__ == "__main__":
     number_of_runs = args.runs
     top_to_select = args.top
     epochs_step = [20] * episodes
+    nb_of_eval = epochs_step
     lr = 1e-3
 
     init_data = lambda: init_dataset(path_data, class_to_search_on, support_filenames, N=N,limit_search=args.limit_search)
 
-    #breakpoint()
 
     scores_df = exp_active_loop(
         N,
@@ -59,13 +59,15 @@ if __name__ == "__main__":
         number_of_runs,
         top_to_select,
         epochs_step,
+        nb_of_eval,
         lr,
         device,
         init_data,
         batch_size,
         args.model,
         search=True,
-        nb_of_eval=20
+        num_workers=8,
+        retrain=True,
     )
 
     scores_df.to_pickle(args.result_file)
