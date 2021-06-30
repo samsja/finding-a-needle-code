@@ -306,20 +306,6 @@ def exp_active_loop(
             test_dataset, num_workers=num_workers, batch_size=batch_size
         )
 
-        if model_adapter_search_param == "RelationNet":
-            search_adaptater = RelationNetSearcher(device,class_to_search_on)
-
-        elif model_adapter_search_param == "RelationNetFull":
-            search_adaptater = RelationNetSearcher(device,[])
-
-        elif model_adapter_search_param == "Entropy":
-            model_adapter_search = EntropyAdaptater(resnet_model, device)
-            search_adaptater = NoAdditionalSearcher(model_adapter_search)
-
-        elif model_adapter_search_param == "Random":
-            model_adapter_search = RandomAdaptater(resnet_model, device)
-            search_adaptater = NoAdditionalSearcher(model_adapter_search)
-
         for i in tqdm(range(episodes)):
 
             if retrain or i == 0:
@@ -337,6 +323,21 @@ def exp_active_loop(
             if model_adapter_search_param in [None, "StandardNet"]:
                 model_adapter_search = resnet_adapt
                 search_adaptater = NoAdditionalSearcher(model_adapter_search)
+
+            elif model_adapter_search_param == "RelationNet":
+                search_adaptater = RelationNetSearcher(device,class_to_search_on)
+
+            elif model_adapter_search_param == "RelationNetFull":
+                search_adaptater = RelationNetSearcher(device,[])
+
+            elif model_adapter_search_param == "Entropy":
+                model_adapter_search = EntropyAdaptater(resnet_model, device)
+                search_adaptater = NoAdditionalSearcher(model_adapter_search)
+
+            elif model_adapter_search_param == "Random":
+                model_adapter_search = RandomAdaptater(resnet_model, device)
+                search_adaptater = NoAdditionalSearcher(model_adapter_search)
+
 
             search_adaptater.train_searcher(
                 train_dataset, num_workers

@@ -251,7 +251,7 @@ def train_and_search(
         scheduler_resnet,
         train_loader,
         val_loader,
-        silent=False,    
+        silent=True,    
     )
     if checkpoint:
         trainer.model_adaptater.model = trainer.model_checkpoint
