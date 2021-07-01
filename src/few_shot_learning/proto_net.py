@@ -52,14 +52,14 @@ class ProtoNetAdaptater(ModuleAdaptater):
         self.device = device
         self.model = model
 
-    def preprocess_batch(self, batch, device, NB, Q, K):
-        x = batch # (NB*(K+Q), 3, H, W) exepcted
+    def preprocess_batch(self, batch, device, N, Q, K):
+        x = batch # (K*(N+Q), 3, H, W) exepcted
         H, W =  x.shape[-2], x.shape[-1]
-        x = x.view(NB, K+Q, 3, H, W)
-        S_ = x[:, :K] # (NB, K, 3, H, W)
-        Q_ = x[:, K:] # (NB, Q, 3, H, W)
-        S_ = S_.contiguous().view(NB*K, 3, H, W)
-        Q_ = Q_.contiguous().view(NB*Q, 3, H, W)
+        x = x.view(K, N+Q, 3, H, W)
+        S_ = x[:, :N] # (NB, K, 3, H, W)
+        Q_ = x[:, N:] # (NB, Q, 3, H, W)
+        S_ = S_.contiguous().view(K*N, 3, H, W)
+        Q_ = Q_.contiguous().view(K*Q, 3, H, W)
         return S_.to(device), Q_.to(device)
 
 
@@ -118,14 +118,14 @@ class ProtoNetAdaptater(ModuleAdaptater):
                                         self.q, 
                                         self.k) 
 
-        # S_, Q_ = (NB*K, 3, 224, 224), (NB*Q, 3, 224, 224)
+        # S_, Q_ = (K*N, 3, 224, 224), (K*Q, 3, 224, 224)
 
-        C = self.model(S_) # (NB*K, 512)
-        C = C.view(self.n, self.k, 512)
-        C = C.mean(dim=1) # (NB, 512)
+        C = self.model(S_) # (K*N, 512)
+        C = C.view(self.k, self.n, 512)
+        C = C.mean(dim=1) # (K 512)
 
-        f = self.model(Q_) # (NB*Q, 512)
-        f = f.view(self.n, self.q, 512)
+        f = self.model(Q_) # (K*q, 512)
+        f = f.view(self.k, self.q, 512)
 
         loss = self.loss_fn(C, f)
 

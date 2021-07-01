@@ -25,6 +25,15 @@ from torchvision.models import resnet18
 from src.few_shot_learning.datasets import FewShotDataSet
 from collections import namedtuple
 
+from src.few_shot_learning import RelationNet, RelationNetAdaptater
+from src.few_shot_learning.relation_net import (
+    BasicRelationModule,
+    ResNetEmbeddingModule,
+)
+
+from src.few_shot_learning.proto_net import ProtoNet,ProtoNetAdaptater
+
+
 
 def get_transform():
     transform = torchvision.transforms.Compose(
@@ -146,12 +155,6 @@ def init_dataset(
     return train_dataset, eval_dataset, test_dataset
 
 
-from src.few_shot_learning import RelationNet, RelationNetAdaptater
-from src.few_shot_learning.relation_net import (
-    BasicRelationModule,
-    ResNetEmbeddingModule,
-)
-
 
 def get_relation_net(device):
     search_model = RelationNet(
@@ -196,7 +199,7 @@ class NoAdditionalSearcher(Searcher):
 class RelationNetSearcher(Searcher):
 
     lr = 3e-4
-    epochs = 1
+    epochs = 200
     nb_eval = 1
 
     def __init__(self, device,class_to_search_on):
@@ -250,6 +253,61 @@ class RelationNetSearcher(Searcher):
         self.trainer.fit(
             RelationNetSearcher.epochs,
             RelationNetSearcher.nb_eval,
+            self.optim,
+            self.scheduler,
+            few_shot_task_loader,
+            few_shot_task_loader,
+        )
+
+
+
+class ProtoNetSearcher(Searcher):
+
+    lr = 3e-4
+    epochs = 40
+    nb_eval = 1
+
+    def __init__(self, device,class_to_search_on):
+
+        self.class_to_search_on = class_to_search_on
+
+        self.model = ProtoNet(3).cuda()
+
+        self.model_adapter = ProtoNetAdaptater(self.model, 1, 1, 1, 1, device)
+
+        self.train_model_adapter = ProtoNetAdaptater(
+            self.model,
+            few_shot_param.episodes,
+            few_shot_param.sample_per_class,
+            few_shot_param.classes_per_ep,
+            few_shot_param.queries,
+            device,
+        )
+
+        self.device = device
+
+        self.optim = torch.optim.Adam(
+            self.model.parameters(), lr=RelationNetSearcher.lr
+        )
+        self.scheduler = torch.optim.lr_scheduler.StepLR(
+            self.optim, step_size=1000, gamma=0.5
+        )
+
+        self.trainer = TrainerFewShot(
+            self.train_model_adapter, device, checkpoint=False
+        )
+
+    def train_searcher(
+        self, train_dataset: FewShotDataSet,  num_workers
+    ):
+
+        few_shot_task_loader = init_few_shot_dataset(
+            train_dataset, self.class_to_search_on, num_workers
+        )
+
+        self.trainer.fit(
+            ProtoNetSearcher.epochs,
+            ProtoNetSearcher.nb_eval,
             self.optim,
             self.scheduler,
             few_shot_task_loader,
@@ -329,6 +387,12 @@ def exp_active_loop(
 
             elif model_adapter_search_param == "RelationNetFull":
                 search_adaptater = RelationNetSearcher(device,[])
+
+            elif model_adapter_search_param == "ProtoNet":
+                search_adaptater = ProtoNetSearcher(device,class_to_search_on)
+
+            elif model_adapter_search_param == "ProtoNetFull":
+                search_adaptater = ProtoNetSearcher(device,[])
 
             elif model_adapter_search_param == "Entropy":
                 model_adapter_search = EntropyAdaptater(resnet_model, device)
