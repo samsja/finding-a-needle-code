@@ -31,8 +31,7 @@ from src.few_shot_learning.relation_net import (
     ResNetEmbeddingModule,
 )
 
-from src.few_shot_learning.proto_net import ProtoNet,ProtoNetAdaptater
-
+from src.few_shot_learning.proto_net import ProtoNet, ProtoNetAdaptater
 
 
 def get_transform():
@@ -155,25 +154,70 @@ def init_dataset(
     return train_dataset, eval_dataset, test_dataset
 
 
-
-def get_data_6_rare(path_data,N,limit_search=None) :
+def get_data_6_rare(path_data, N, limit_search=None):
     class_to_search_on = torch.Tensor([25, 26, 32, 95, 152, 175]).long()
 
-    support_filenames = [
-        f"{path_data}/patches/warning--slippery-road-surface--g1/1X0IkHf4hyDyWv9jdL25uXQ.jpg",
-        f"{path_data}/patches/warning--curve-left--g1/0vsCk34R8N_nq31Hjadwt4Q.jpg",
-        f"{path_data}/patches/regulatory--no-overtaking--g2/1eP65vCRiyu_x8nOJl_otsg.jpg",
-        f"{path_data}/patches/regulatory--no-stopping--g2/1x3iZWxvj6fTaLeBiiTPeEA.jpg",
-        f"{path_data}/patches/regulatory--maximum-speed-limit-20--g1/1t7pO54Ujrat7T33j3uGTOg.jpg",
-        f"{path_data}/patches/warning--slippery-road-surface--g2/1PYQrF98Be90rnFsFBpO6Qg.jpg",
-    ]
+    support_filenames = {
+        25: [
+            f"{path_data}/patches/warning--slippery-road-surface--g1/1X0IkHf4hyDyWv9jdL25uXQ.jpg"
+        ],
+        26: [
+            f"{path_data}/patches/warning--curve-left--g1/0vsCk34R8N_nq31Hjadwt4Q.jpg"
+        ],
+        32: [
+            f"{path_data}/patches/regulatory--no-overtaking--g2/1eP65vCRiyu_x8nOJl_otsg.jpg"
+        ],
+        95: [
+            f"{path_data}/patches/regulatory--no-stopping--g2/1x3iZWxvj6fTaLeBiiTPeEA.jpg"
+        ],
+        152: [
+            f"{path_data}/patches/regulatory--maximum-speed-limit-20--g1/1t7pO54Ujrat7T33j3uGTOg.jpg"
+        ],
+        175: [
+            f"{path_data}/patches/warning--slippery-road-surface--g2/1PYQrF98Be90rnFsFBpO6Qg.jpg"
+        ],
+    }
+
+    return class_to_search_on, lambda: init_dataset(
+        path_data, class_to_search_on, support_filenames, N=N, limit_search=limit_search
+    )
 
 
-    support_filenames = {key.item() : [support_filenames[i]] for i,key in enumerate(class_to_search_on) }
-    
+def get_data_25_rare(path_data, N, limit_search=None):
+    class_to_search_on = torch.Tensor(
+        [
+            276,
+            311,
+            295,
+            312,
+            255,
+            263,
+            309,
+            254,
+            299,
+            290,
+            307,
+            146,
+            275,
+            176,
+            178,
+            143,
+            234,
+            33,
+            187,
+            259,
+            20,
+            284,
+            223,
+            271,
+            273,
+        ]
+    ).long()
 
-    return class_to_search_on,lambda: init_dataset(path_data, class_to_search_on, support_filenames, N=N,limit_search=limit_search)
-
+    support_filenames = {}
+    return class_to_search_on, lambda: init_dataset(
+        path_data, class_to_search_on, support_filenames, N=N, limit_search=limit_search
+    )
 
 
 def get_relation_net(device):
@@ -222,7 +266,7 @@ class RelationNetSearcher(Searcher):
     epochs = 250
     nb_eval = 1
 
-    def __init__(self, device,class_to_search_on):
+    def __init__(self, device, class_to_search_on):
 
         self.class_to_search_on = class_to_search_on
 
@@ -262,9 +306,7 @@ class RelationNetSearcher(Searcher):
             self.train_model_adapter, device, checkpoint=False
         )
 
-    def train_searcher(
-        self, train_dataset: FewShotDataSet,  num_workers
-    ):
+    def train_searcher(self, train_dataset: FewShotDataSet, num_workers):
 
         few_shot_task_loader = init_few_shot_dataset(
             train_dataset, self.class_to_search_on, num_workers
@@ -281,14 +323,13 @@ class RelationNetSearcher(Searcher):
         )
 
 
-
 class ProtoNetSearcher(Searcher):
 
     lr = 3e-4
     epochs = 40
     nb_eval = 1
 
-    def __init__(self, device,class_to_search_on):
+    def __init__(self, device, class_to_search_on):
 
         self.class_to_search_on = class_to_search_on
 
@@ -318,9 +359,7 @@ class ProtoNetSearcher(Searcher):
             self.train_model_adapter, device, checkpoint=False
         )
 
-    def train_searcher(
-        self, train_dataset: FewShotDataSet,  num_workers
-    ):
+    def train_searcher(self, train_dataset: FewShotDataSet, num_workers):
 
         few_shot_task_loader = init_few_shot_dataset(
             train_dataset, self.class_to_search_on, num_workers
@@ -333,7 +372,7 @@ class ProtoNetSearcher(Searcher):
             self.scheduler,
             few_shot_task_loader,
             few_shot_task_loader,
-            silent=True
+            silent=True,
         )
 
 
@@ -405,16 +444,16 @@ def exp_active_loop(
                 search_adaptater = NoAdditionalSearcher(model_adapter_search)
 
             elif model_adapter_search_param == "RelationNet":
-                search_adaptater = RelationNetSearcher(device,class_to_search_on)
+                search_adaptater = RelationNetSearcher(device, class_to_search_on)
 
             elif model_adapter_search_param == "RelationNetFull":
-                search_adaptater = RelationNetSearcher(device,[])
+                search_adaptater = RelationNetSearcher(device, [])
 
             elif model_adapter_search_param == "ProtoNet":
-                search_adaptater = ProtoNetSearcher(device,class_to_search_on)
+                search_adaptater = ProtoNetSearcher(device, class_to_search_on)
 
             elif model_adapter_search_param == "ProtoNetFull":
-                search_adaptater = ProtoNetSearcher(device,[])
+                search_adaptater = ProtoNetSearcher(device, [])
 
             elif model_adapter_search_param == "Entropy":
                 model_adapter_search = EntropyAdaptater(resnet_model, device)
@@ -424,10 +463,7 @@ def exp_active_loop(
                 model_adapter_search = RandomAdaptater(resnet_model, device)
                 search_adaptater = NoAdditionalSearcher(model_adapter_search)
 
-
-            search_adaptater.train_searcher(
-                train_dataset, num_workers
-            )
+            search_adaptater.train_searcher(train_dataset, num_workers)
 
             train_and_search(
                 class_to_search_on,
