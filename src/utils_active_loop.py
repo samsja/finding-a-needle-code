@@ -257,6 +257,7 @@ class RelationNetSearcher(Searcher):
             self.scheduler,
             few_shot_task_loader,
             few_shot_task_loader,
+            silent=True,
         )
 
 
