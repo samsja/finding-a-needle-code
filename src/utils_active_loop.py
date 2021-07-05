@@ -199,7 +199,7 @@ class NoAdditionalSearcher(Searcher):
 class RelationNetSearcher(Searcher):
 
     lr = 3e-4
-    epochs = 200
+    epochs = 250
     nb_eval = 1
 
     def __init__(self, device,class_to_search_on):
@@ -312,6 +312,7 @@ class ProtoNetSearcher(Searcher):
             self.scheduler,
             few_shot_task_loader,
             few_shot_task_loader,
+            silent=True
         )
 
 
