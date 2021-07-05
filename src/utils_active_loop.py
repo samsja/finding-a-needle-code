@@ -156,6 +156,26 @@ def init_dataset(
 
 
 
+def get_data_6_rare(path_data,N,limit_search=None) :
+    class_to_search_on = torch.Tensor([25, 26, 32, 95, 152, 175]).long()
+
+    support_filenames = [
+        f"{path_data}/patches/warning--slippery-road-surface--g1/1X0IkHf4hyDyWv9jdL25uXQ.jpg",
+        f"{path_data}/patches/warning--curve-left--g1/0vsCk34R8N_nq31Hjadwt4Q.jpg",
+        f"{path_data}/patches/regulatory--no-overtaking--g2/1eP65vCRiyu_x8nOJl_otsg.jpg",
+        f"{path_data}/patches/regulatory--no-stopping--g2/1x3iZWxvj6fTaLeBiiTPeEA.jpg",
+        f"{path_data}/patches/regulatory--maximum-speed-limit-20--g1/1t7pO54Ujrat7T33j3uGTOg.jpg",
+        f"{path_data}/patches/warning--slippery-road-surface--g2/1PYQrF98Be90rnFsFBpO6Qg.jpg",
+    ]
+
+
+    support_filenames = {key.item() : [support_filenames[i]] for i,key in enumerate(class_to_search_on) }
+    
+
+    return class_to_search_on,lambda: init_dataset(path_data, class_to_search_on, support_filenames, N=N,limit_search=limit_search)
+
+
+
 def get_relation_net(device):
     search_model = RelationNet(
         in_channels=3,
