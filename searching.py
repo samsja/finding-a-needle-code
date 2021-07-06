@@ -1,7 +1,6 @@
 import torch
 
-from src.utils_active_loop import exp_active_loop
-from src.datasource import get_data_6_rare
+from src.utils_active_loop import exp_active_loop, get_data_6_rare, get_data_25_rare
 
 
 import argparse
@@ -11,11 +10,9 @@ if __name__ == "__main__":
 
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--ep", default=10, type=int)
     parser.add_argument("--runs", default=1, type=int)
     parser.add_argument("--model",default="StandardNet",type=str)
     parser.add_argument("-N",default=1,type=int)
-    parser.add_argument("--top",default=50,type=int)
     parser.add_argument("--result_file",type=str)
     parser.add_argument("--limit_search",default=None,type=int)
     parser.add_argument("--path_data",default= "/staging/thesis_data_search/data",type=str)
@@ -27,18 +24,14 @@ if __name__ == "__main__":
     batch_size = 256
     N = args.N
 
-    episodes = args.ep
     number_of_runs = args.runs
-    top_to_select = args.top
-    epochs_step = [20] * episodes
-    nb_of_eval = epochs_step
-    lr = 1e-3
 
     path_data = args.path_data
-    class_to_search_on,init_data = get_data_6_rare(path_data,N,args.limit_search)
+
+    class_to_search_on,init_data = get_data_25_rare(path_data,N,args.limit_search)
 
 
-    scores_df = exp_active_loop(
+    results_df = exp_active_loop(
         N,
         class_to_search_on,
         episodes,
@@ -56,4 +49,4 @@ if __name__ == "__main__":
         retrain=True,
     )
 
-    scores_df.to_pickle(args.result_file)
+    results_df.to_pickle(args.result_file)
