@@ -19,26 +19,22 @@ def imshow(inp, title=None):
         plt.title(title)
 
 
-def plot_list(images,title=None,ncols=4,figsize=(7,7),img_from_tensor=img_from_tensor):
-    quotient = images.shape[0] // ncols
-    rest = images.shape[0] % ncols
-    
-    nrows = quotient + 1 if rest > 0 else 1
-    
-    fig,ax = plt.subplots(nrows=nrows,ncols=ncols, constrained_layout=True,figsize=figsize)
-    
-    if title is not None:
-        if len(title) != len(images):
-            raise ValueError
-        
-    for i in range(nrows):
-        for j in range(ncols):
-            ax[i,j].axis("off")
-                 
-    for i,image in enumerate(images):
-        (x,y) = (i//ncols,i%ncols)
-        ax[x,y].imshow(img_from_tensor(image))
-        
-        if title is not None:
-            ax[x,y].set_title(title[i])
+def plot_list(images,title=None,ncols=4,figsize=(8,8),img_from_tensor=img_from_tensor):
+   
 
+
+    if ncols > len(images):
+        ncols = len(images)
+
+    quotient = len(images) // ncols
+    rest = len(images) % ncols
+    
+    fig = plt.figure(figsize=figsize)
+    columns = ncols
+    rows = quotient  if rest > 0 else 1
+
+    for i in range(1, columns * rows + 1):
+        fig.add_subplot(rows, columns, i)
+        imshow(images[i - 1],title=title[i-1] if title is not None else None)
+        plt.axis("off")
+    plt.show()
