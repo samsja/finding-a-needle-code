@@ -275,15 +275,20 @@ def train_and_search(
 def plot_score_one_class(score, class_, scores_df):
     plt.plot(list(scores_df[scores_df["class"] == class_][score]), label=f"{class_}")
 
-def plot_score(score, scores_df):
-    for class_ in scores_df["class"].unique():
-        plot_score_one_class(score, class_, scores_df)
 
+def plot_mean(score,scores_df):
     plt.plot(
         list(scores_df[["iteration", score]].groupby(["iteration"]).mean()[score]),
         label="mean",
         linewidth=4,
     )
+ 
+
+def plot_score(score, scores_df):
+    for class_ in scores_df["class"].unique():
+        plot_score_one_class(score, class_, scores_df)
+
+    plot_mean(score,scores_df)
     plt.title(f"{score}")
     plt.legend(
         loc="upper center",
@@ -294,6 +299,28 @@ def plot_score(score, scores_df):
     )
 
 
+
+
+def plot_score_model(score, model,scores_df):
+    plot_score(score, scores_df[scores_df["model"] == model])
+
+
+def plot_all_model_mean(score,scores_df):
+    for model in scores_df["model"].unique():
+        df = scores_df[scores_df["model"] == model]
+        plt.plot(
+            list(df[["iteration", score]].groupby(["iteration"]).mean()[score]),
+            label=model,
+        )
+    plt.title(f"{score}")
+    plt.legend(
+        loc="upper center",
+        bbox_to_anchor=(0.5, -0.05),
+        fancybox=True,
+        shadow=True,
+        ncol=5,
+    )
+    
 
 class EntropyAdaptater:
 
