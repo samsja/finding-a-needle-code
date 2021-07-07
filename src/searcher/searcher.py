@@ -40,10 +40,11 @@ class RelationNetSearcher(Searcher):
 
     lr = 3e-4
     epochs = 250
-    nb_eval = 1
+    nb_eval = 120
 
-    def __init__(self, device, few_shot_param,class_to_search_on):
+    def __init__(self, device, few_shot_param,class_to_search_on,debug=False):
 
+        self.debug = debug
         self.class_to_search_on = class_to_search_on
 
         self.model = RelationNet(
@@ -88,25 +89,27 @@ class RelationNetSearcher(Searcher):
             train_dataset, self.class_to_search_on, num_workers
         )
 
+        nb_eval = 1 if not self.debug else RelationNetSearcher.nb_eval
         self.trainer.fit(
             RelationNetSearcher.epochs,
-            RelationNetSearcher.nb_eval,
+            nb_eval,
             self.optim,
             self.scheduler,
             few_shot_task_loader,
             few_shot_task_loader,
-            silent=True,
+            silent=not(self.debug),
         )
 
 
 class ProtoNetSearcher(Searcher):
 
     lr = 3e-4
-    epochs = 40
-    nb_eval = 1
+    epochs = 200
+    nb_eval = 100
 
-    def __init__(self, device, few_shot_param,class_to_search_on):
+    def __init__(self, device, few_shot_param,class_to_search_on,debug=False):
 
+        self.debug = debug
         self.class_to_search_on = class_to_search_on
 
         self.model = ProtoNet(3).cuda()
@@ -141,14 +144,16 @@ class ProtoNetSearcher(Searcher):
             train_dataset, self.class_to_search_on, num_workers
         )
 
+        nb_eval = 1 if not self.debug else ProtoNetSearcher.nb_eval
+       
         self.trainer.fit(
             ProtoNetSearcher.epochs,
-            ProtoNetSearcher.nb_eval,
+            nb_eval,
             self.optim,
             self.scheduler,
             few_shot_task_loader,
             few_shot_task_loader,
-            silent=True,
+            silent=not(self.debug),    
         )
 
 
@@ -159,7 +164,8 @@ class StandardNetSearcher(Searcher):
     nb_eval = epochs
     batch_size = 256
 
-    def __init__(self, device,number_of_class):
+    def __init__(self, device,number_of_class,debug=False):
+        self.debug = debug
         self.model = StandardNet(number_of_class).to(device)
         self.model_adapter = StandardNetAdaptater(self.model, device)
         self.trainer = TrainerFewShot(self.model_adapter,device, checkpoint=True)
@@ -190,7 +196,7 @@ class StandardNetSearcher(Searcher):
             self.scheduler,
             train_loader,
             val_loader,
-            silent=True,    
+            silent=not(self.debug),    
         )
         
         self.trainer.model_adaptater.model = self.trainer.model_checkpoint

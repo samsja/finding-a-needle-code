@@ -23,6 +23,7 @@ from src.searcher.searcher import (
 
 from src.datasource import few_shot_param
 
+
 def count_in_top(top, class_, test_dataset):
     top_labels = [test_dataset[idx]["label"].item() for idx in top]
     return top_labels.count(class_)
@@ -191,52 +192,6 @@ def found_new_images(
     return datapoint_to_add
 
 
-def train_and_search(
-    mask,
-    epochs,
-    train_loader,
-    val_loader,
-    test_taskloader,
-    trainer,
-    optim_resnet,
-    scheduler_resnet,
-    model_adaptater_search,
-    top_to_select=1,
-    treshold=0.5,
-    only_true_image=True,
-    checkpoint=True,
-    nb_of_eval=1,
-    search=True,
-):
-
-    trainer.fit(
-        epochs,
-        nb_of_eval,
-        optim_resnet,
-        scheduler_resnet,
-        train_loader,
-        val_loader,
-        silent=True,
-    )
-    if checkpoint:
-        trainer.model_adaptater.model = trainer.model_checkpoint
-
-    if search:
-        class_to_rebalanced = mask
-
-        for class_ in class_to_rebalanced:
-            datapoint_to_add = found_new_images(
-                model_adaptater_search,
-                class_,
-                test_taskloader,
-                train_loader.dataset,
-                top_to_select=top_to_select,
-            )
-            move_found_images(
-                datapoint_to_add, train_loader.dataset, test_taskloader.dataset
-            )
-
-
 def plot_score_one_class(score, class_, scores_df):
     plt.plot(list(scores_df[scores_df["class"] == class_][score]), label=f"{class_}")
 
@@ -346,25 +301,27 @@ def exp_searching(
     N,
     class_to_search_on,
     number_of_runs,
-    top_to_select : list,
+    top_to_select: list,
     device,
     init_dataset,
     batch_size,
     model_adapter_search_param=None,
     callback=None,
     num_workers=4,
+    plot=False,
+    debug=False,
 ):
 
     scores = {
         "class": [],
         "run_id": [],
-        "data_available" : [],
+        "data_available": [],
     }
 
     for top in top_to_select:
         scores[f"t{top}"] = []
         scores[f"s{top}"] = []
-    
+
     for run_id in tqdm(range(number_of_runs)):
 
         train_dataset, eval_dataset, test_dataset = init_dataset()
@@ -378,31 +335,27 @@ def exp_searching(
         )
 
         if model_adapter_search_param in [None, "StandardNet"]:
-            search_adaptater = StandardNetSearcher(device, len(train_dataset.classes))
+            search_adaptater = StandardNetSearcher(
+                device, len(train_dataset.classes), debug=debug
+            )
 
         elif model_adapter_search_param == "RelationNet":
             search_adaptater = RelationNetSearcher(
-                device, few_shot_param, class_to_search_on
+                device, few_shot_param, class_to_search_on, debug=debug
             )
 
         elif model_adapter_search_param == "RelationNetFull":
-            search_adaptater = RelationNetSearcher(device, few_shot_param, [])
+            search_adaptater = RelationNetSearcher(
+                device, few_shot_param, [], debug=debug
+            )
 
         elif model_adapter_search_param == "ProtoNet":
             search_adaptater = ProtoNetSearcher(
-                device, few_shot_param, class_to_search_on
+                device, few_shot_param, class_to_search_on, debug=debug
             )
 
         elif model_adapter_search_param == "ProtoNetFull":
-            search_adaptater = ProtoNetSearcher(device, few_shot_param, [])
-
-        elif model_adapter_search_param == "Entropy":
-            model_adapter_search = EntropyAdaptater(resnet_model, device)
-            search_adaptater = NoAdditionalSearcher(model_adapter_search)
-
-        elif model_adapter_search_param == "Random":
-            model_adapter_search = RandomAdaptater(resnet_model, device)
-            search_adaptater = NoAdditionalSearcher(model_adapter_search)
+            search_adaptater = ProtoNetSearcher(device, few_shot_param, [], debug=debug)
 
         search_adaptater.train_searcher(train_dataset, eval_dataset, num_workers)
 
@@ -410,35 +363,44 @@ def exp_searching(
 
         for class_ in class_to_search_on:
 
-
-
             top, relation = search_and_get_top(
                 search_adaptater.model_adapter,
                 class_,
                 test_taskloader,
                 train_loader.dataset,
             )
-            #  plot_search(
-                #      50,
-                #      top,
-                #      relation,
-                #      test_dataset,
-                #      figsize=(15, 15),
-                #      ncols=6,
-                #  )
-            #
+
+            if plot:
+                imshow(
+                    train_dataset[train_dataset.get_index_in_class(class_)[0]]["img"]
+                )
+                plot_search(
+                    50,
+                    top,
+                    relation,
+                    test_dataset,
+                    figsize=(15, 15),
+                    ncols=6,
+                )
+
+                plot_image_to_find(
+                    class_,
+                    test_dataset,
+                    relation,
+                    top,
+                    max_len=50,
+                )
 
             class_ = class_.item()
-            data_available = len(test_dataset.get_index_in_class(class_)) 
+            data_available = len(test_dataset.get_index_in_class(class_))
             scores["class"].append(class_)
             scores["run_id"].append(run_id)
             scores["data_available"].append(data_available)
 
-
             for topX in top_to_select:
                 count = count_in_top(top[:topX], class_, test_dataset)
                 scores[f"t{topX}"].append(count)
-                scores[f"s{topX}"].append(count/min(topX,data_available))
+                scores[f"s{topX}"].append(count / min(topX, data_available))
 
         if callback is not None:
             callback(train_dataset, eval_dataset, test_dataset)

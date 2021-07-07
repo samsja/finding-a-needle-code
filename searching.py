@@ -36,7 +36,7 @@ if __name__ == "__main__":
         N,
         class_to_search_on,
         number_of_runs=args.runs,
-        top_to_select=[15,50,100,1000],
+        top_to_select=[5,15,50,100,1000],
         device=device,
         init_dataset=init_data,
         batch_size = batch_size,
