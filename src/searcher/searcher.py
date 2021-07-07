@@ -18,6 +18,8 @@ from src.few_shot_learning.proto_net import ProtoNet, ProtoNetAdaptater
 from src.datasource import init_few_shot_dataset
 
 
+from src.few_shot_learning.standard_net import StandardNet, StandardNetAdaptater
+
 class Searcher:
     def train_searcher(
         self, train_dataset: FewShotDataSet, class_to_search_on, num_workers
@@ -80,7 +82,7 @@ class RelationNetSearcher(Searcher):
             self.train_model_adapter, device, checkpoint=False
         )
 
-    def train_searcher(self, train_dataset: FewShotDataSet, num_workers):
+    def train_searcher(self, train_dataset: FewShotDataSet, val_dataset: FewShotDataSet, num_workers):
 
         few_shot_task_loader = init_few_shot_dataset(
             train_dataset, self.class_to_search_on, num_workers
@@ -133,7 +135,7 @@ class ProtoNetSearcher(Searcher):
             self.train_model_adapter, device, checkpoint=False
         )
 
-    def train_searcher(self, train_dataset: FewShotDataSet, num_workers):
+    def train_searcher(self, train_dataset: FewShotDataSet, val_dataset: FewShotDataSet, num_workers):
 
         few_shot_task_loader = init_few_shot_dataset(
             train_dataset, self.class_to_search_on, num_workers
@@ -148,5 +150,50 @@ class ProtoNetSearcher(Searcher):
             few_shot_task_loader,
             silent=True,
         )
+
+
+class StandardNetSearcher(Searcher):
+
+    lr = 1e-3
+    epochs = 20
+    nb_eval = epochs
+    batch_size = 256
+
+    def __init__(self, device,number_of_class):
+        self.model = StandardNet(number_of_class).to(device)
+        self.model_adapter = StandardNetAdaptater(self.model, device)
+        self.trainer = TrainerFewShot(self.model_adapter,device, checkpoint=True)
+
+        self.optim = torch.optim.Adam(self.model.parameters(), lr=StandardNetSearcher.lr)
+
+        self.scheduler = torch.optim.lr_scheduler.StepLR(
+            self.optim, step_size=100000, gamma=0.9
+        )
+
+
+
+
+    def train_searcher(self, train_dataset: FewShotDataSet, eval_dataset: FewShotDataSet, num_workers):
+
+        train_loader = torch.utils.data.DataLoader(
+            train_dataset, shuffle=True, num_workers=num_workers, batch_size=StandardNetSearcher.batch_size
+        )
+
+        val_loader = torch.utils.data.DataLoader(
+            eval_dataset, batch_size=StandardNetSearcher.batch_size, num_workers=num_workers
+        )
+
+        self.trainer.fit(
+            StandardNetSearcher.epochs,
+            StandardNetSearcher.nb_eval,
+            self.optim,
+            self.scheduler,
+            train_loader,
+            val_loader,
+            silent=True,    
+        )
+        
+        self.trainer.model_adaptater.model = self.trainer.model_checkpoint
+
 
 

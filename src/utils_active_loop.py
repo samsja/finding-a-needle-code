@@ -17,10 +17,16 @@ import pickle
 
 from src.few_shot_learning.utils_train import TrainerFewShot
 
-from src.datasource import init_few_shot_dataset, few_shot_param,FewShotParam
+from src.datasource import init_few_shot_dataset, few_shot_param, FewShotParam
 
 
-from src.searcher.searcher import RelationNetSearcher,ProtoNetSearcher,NoAdditionalSearcher
+from src.searcher.searcher import (
+    RelationNetSearcher,
+    ProtoNetSearcher,
+    NoAdditionalSearcher,
+    StandardNetSearcher,
+)
+
 
 def exp_active_loop(
     N,
@@ -90,16 +96,20 @@ def exp_active_loop(
                 search_adaptater = NoAdditionalSearcher(model_adapter_search)
 
             elif model_adapter_search_param == "RelationNet":
-                search_adaptater = RelationNetSearcher(device, few_shot_param,class_to_search_on)
+                search_adaptater = RelationNetSearcher(
+                    device, few_shot_param, class_to_search_on
+                )
 
             elif model_adapter_search_param == "RelationNetFull":
-                search_adaptater = RelationNetSearcher(device, few_shot_param,[])
+                search_adaptater = RelationNetSearcher(device, few_shot_param, [])
 
             elif model_adapter_search_param == "ProtoNet":
-                search_adaptater = ProtoNetSearcher(device, few_shot_param,class_to_search_on)
+                search_adaptater = ProtoNetSearcher(
+                    device, few_shot_param, class_to_search_on
+                )
 
             elif model_adapter_search_param == "ProtoNetFull":
-                search_adaptater = ProtoNetSearcher(device, few_shot_param,[])
+                search_adaptater = ProtoNetSearcher(device, few_shot_param, [])
 
             elif model_adapter_search_param == "Entropy":
                 model_adapter_search = EntropyAdaptater(resnet_model, device)
@@ -109,7 +119,7 @@ def exp_active_loop(
                 model_adapter_search = RandomAdaptater(resnet_model, device)
                 search_adaptater = NoAdditionalSearcher(model_adapter_search)
 
-            search_adaptater.train_searcher(train_dataset, num_workers)
+            search_adaptater.train_searcher(train_dataset, eval_dataset, num_workers)
 
             train_and_search(
                 class_to_search_on,
@@ -181,6 +191,81 @@ def exp_active_loop(
                 scores["train_size"].append(
                     train_dataset.get_index_in_class(class_).shape[0]
                 )
+
+    if callback is not None:
+        callback(resnet_model, train_dataset, eval_dataset, test_dataset)
+
+    scores_df = pd.DataFrame(scores)
+
+    return scores_df
+
+
+def exp_serching(
+    N,
+    class_to_search_on,
+    number_of_runs,
+    top_to_select,
+    device,
+    init_dataset,
+    batch_size,
+    model_adapter_search_param=None,
+    callback=None,
+    num_workers=4,
+):
+
+    scores = {
+        "class": [],
+        "run_id": [],
+        "t50": [],
+    }
+
+    for run_id in tqdm(range(number_of_runs)):
+
+        train_dataset, eval_dataset, test_dataset = init_dataset()
+
+        test_taskloader = torch.utils.data.DataLoader(
+            test_dataset, num_workers=num_workers, batch_size=batch_size
+        )
+
+        if model_adapter_search_param in [None, "StandardNet"]:
+            search_adaptater = StandardNetSearcher(model_adapter_search)
+
+        elif model_adapter_search_param == "RelationNet":
+            search_adaptater = RelationNetSearcher(
+                device, few_shot_param, class_to_search_on
+            )
+
+        elif model_adapter_search_param == "RelationNetFull":
+            search_adaptater = RelationNetSearcher(device, few_shot_param, [])
+
+        elif model_adapter_search_param == "ProtoNet":
+            search_adaptater = ProtoNetSearcher(
+                device, few_shot_param, class_to_search_on
+            )
+
+        elif model_adapter_search_param == "ProtoNetFull":
+            search_adaptater = ProtoNetSearcher(device, few_shot_param, [])
+
+        elif model_adapter_search_param == "Entropy":
+            model_adapter_search = EntropyAdaptater(resnet_model, device)
+            search_adaptater = NoAdditionalSearcher(model_adapter_search)
+
+        elif model_adapter_search_param == "Random":
+            model_adapter_search = RandomAdaptater(resnet_model, device)
+            search_adaptater = NoAdditionalSearcher(model_adapter_search)
+
+        search_adaptater.train_searcher(train_dataset, eval_dataset, num_workers)
+
+
+        ## search
+
+        ## coun top
+
+        for class_ in class_to_search_on:
+            class_ = class_.item()
+            scores["class"].append(class_)
+            scores["run_id"].append(run_id)
+
 
     if callback is not None:
         callback(resnet_model, train_dataset, eval_dataset, test_dataset)

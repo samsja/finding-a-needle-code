@@ -22,6 +22,8 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+    print(args)
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     batch_size = 256

@@ -1,6 +1,6 @@
 import torch
 import matplotlib.pyplot as plt
-
+import pandas as pd
 from tqdm.autonotebook import tqdm
 
 from src.few_shot_learning.relation_net import (
@@ -14,9 +14,15 @@ from src.few_shot_learning.standard_net import StandardNet, StandardNetAdaptater
 
 from src.utils_plot import img_from_tensor, imshow, plot_list
 
+from src.searcher.searcher import (
+    RelationNetSearcher,
+    ProtoNetSearcher,
+    NoAdditionalSearcher,
+    StandardNetSearcher,
+)
 
-       
-        
+from src.datasource import few_shot_param
+
 def count_in_top(top, class_, test_dataset):
     top_labels = [test_dataset[idx]["label"].item() for idx in top]
     return top_labels.count(class_)
@@ -43,10 +49,10 @@ def plot_search(
     )
 
 
-def plot_image_to_find(class_to_search_for, test_dataset, relation, top,max_len=10):
+def plot_image_to_find(class_to_search_for, test_dataset, relation, top, max_len=10):
 
     index_to_find = test_dataset.get_index_in_class(class_to_search_for)
-    max_len = min(max_len,len(index_to_find)-1)
+    max_len = min(max_len, len(index_to_find) - 1)
 
     index_to_find = index_to_find[:max_len]
 
@@ -72,7 +78,7 @@ def search_rare_class(
     model_adaptater,
     plot=False,
     tqdm_silent=False,
-    max_len = 10
+    max_len=10,
 ):
     support_img = torch.stack([train_dataset[idx]["img"] for idx in idx_support])
 
@@ -98,7 +104,9 @@ def search_rare_class(
             ncols=6,
         )
 
-        plot_image_to_find(class_to_search_for, test_dataset, relation, top,max_len=max_len)
+        plot_image_to_find(
+            class_to_search_for, test_dataset, relation, top, max_len=max_len
+        )
 
     return (
         len(test_dataset.get_index_in_class(class_to_search_for)),
@@ -110,8 +118,6 @@ def search_rare_class(
         relation,
     )
 
-
-import sklearn.metrics as metrics
 
 def move_found_images(datapoint_to_add, train_dataset, test_dataset):
     len_train, len_test = len(train_dataset), len(test_dataset)
@@ -131,22 +137,41 @@ def move_found_images(datapoint_to_add, train_dataset, test_dataset):
     # assert(len(train_dataset) + len(test_dataset)  == len_train + len_test)
 
 
-def found_new_images(
+def search_and_get_top(
     model_adapter,
     class_,
     test_taskloader,
     train_dataset,
-    top_to_select=3,
 ):
-    support_set = torch.stack([train_dataset[idx]["img"] for idx in train_dataset.get_index_in_class(class_)])
+    support_set = torch.stack(
+        [train_dataset[idx]["img"] for idx in train_dataset.get_index_in_class(class_)]
+    )
 
-
-    top, _ = model_adapter.search_tensor(
+    top, relation = model_adapter.search_tensor(
         test_taskloader,
         support_set,
         class_,
         tqdm_silent=True,
     )
+
+    return top, relation
+
+
+def found_new_images(
+    model_adapter,
+    class_,
+    test_taskloader,
+    train_dataset,
+    top_to_select=50,
+):
+
+    top, _ = search_and_get_top(
+        model_adapter,
+        class_,
+        test_taskloader,
+        train_dataset,
+    )
+
     topX = top[:top_to_select][:, 0]
 
     datapoint_to_add = {}
@@ -181,7 +206,7 @@ def train_and_search(
     only_true_image=True,
     checkpoint=True,
     nb_of_eval=1,
-    search=True,  
+    search=True,
 ):
 
     trainer.fit(
@@ -191,15 +216,13 @@ def train_and_search(
         scheduler_resnet,
         train_loader,
         val_loader,
-        silent=True,    
+        silent=True,
     )
     if checkpoint:
         trainer.model_adaptater.model = trainer.model_checkpoint
 
-
     if search:
         class_to_rebalanced = mask
-
 
         for class_ in class_to_rebalanced:
             datapoint_to_add = found_new_images(
@@ -209,26 +232,28 @@ def train_and_search(
                 train_loader.dataset,
                 top_to_select=top_to_select,
             )
-            move_found_images(datapoint_to_add, train_loader.dataset, test_taskloader.dataset)
+            move_found_images(
+                datapoint_to_add, train_loader.dataset, test_taskloader.dataset
+            )
 
 
 def plot_score_one_class(score, class_, scores_df):
     plt.plot(list(scores_df[scores_df["class"] == class_][score]), label=f"{class_}")
 
 
-def plot_mean(score,scores_df):
+def plot_mean(score, scores_df):
     plt.plot(
         list(scores_df[["iteration", score]].groupby(["iteration"]).mean()[score]),
         label="mean",
         linewidth=4,
     )
- 
+
 
 def plot_score(score, scores_df):
     for class_ in scores_df["class"].unique():
         plot_score_one_class(score, class_, scores_df)
 
-    plot_mean(score,scores_df)
+    plot_mean(score, scores_df)
     plt.title(f"{score}")
     plt.legend(
         loc="upper center",
@@ -239,13 +264,11 @@ def plot_score(score, scores_df):
     )
 
 
-
-
-def plot_score_model(score, model,scores_df):
+def plot_score_model(score, model, scores_df):
     plot_score(score, scores_df[scores_df["model"] == model])
 
 
-def plot_all_model_mean(score,scores_df):
+def plot_all_model_mean(score, scores_df):
     for model in scores_df["model"].unique():
         df = scores_df[scores_df["model"] == model]
         plt.plot(
@@ -260,11 +283,10 @@ def plot_all_model_mean(score,scores_df):
         shadow=True,
         ncol=5,
     )
-    
+
 
 class EntropyAdaptater:
-
-    def __init__(self,model,device):
+    def __init__(self, model, device):
         self.model = model
         self.device = device
 
@@ -273,21 +295,21 @@ class EntropyAdaptater:
         self,
         test_taskloader: torch.utils.data.DataLoader,
         support_set: torch.Tensor,
-        rare_class_index = None, 
-        tqdm_silent = False,
+        rare_class_index=None,
+        tqdm_silent=False,
     ):
 
         self.model.eval()
 
         entropy = []
         index = []
-        for idx, batch in enumerate(tqdm(test_taskloader,disable=tqdm_silent)):
+        for idx, batch in enumerate(tqdm(test_taskloader, disable=tqdm_silent)):
 
             inputs = batch["img"].to(self.device)
 
             outputs = self.model(inputs).softmax(dim=1)
-            
-            batch_entropy = -(torch.log(outputs)*outputs).sum(dim=1)
+
+            batch_entropy = -(torch.log(outputs) * outputs).sum(dim=1)
 
             entropy.append(batch_entropy)
             index.append(batch["id"].long().to(self.device))
@@ -299,9 +321,9 @@ class EntropyAdaptater:
 
         return index[argsort], entropy
 
-class RandomAdaptater:
 
-    def __init__(self,model,device):
+class RandomAdaptater:
+    def __init__(self, model, device):
         self.device = device
         self.model = model
 
@@ -310,13 +332,117 @@ class RandomAdaptater:
         self,
         test_taskloader: torch.utils.data.DataLoader,
         support_set: torch.Tensor,
-        rare_class_index = None, 
-        tqdm_silent = False,
+        rare_class_index=None,
+        tqdm_silent=False,
     ):
-
 
         index = torch.randperm(len(test_taskloader.dataset)).long().unsqueeze(dim=1)
         value = torch.zeros(len(test_taskloader.dataset)).float()
-        
+
         return index, value
 
+
+def exp_searching(
+    N,
+    class_to_search_on,
+    number_of_runs,
+    top_to_select : list,
+    device,
+    init_dataset,
+    batch_size,
+    model_adapter_search_param=None,
+    callback=None,
+    num_workers=4,
+):
+
+    scores = {
+        "class": [],
+        "run_id": [],
+        "data_available" : [],
+    }
+
+    for top in top_to_select:
+        scores[f"t{top}"] = []
+        scores[f"s{top}"] = []
+    
+    for run_id in tqdm(range(number_of_runs)):
+
+        train_dataset, eval_dataset, test_dataset = init_dataset()
+
+        train_loader = torch.utils.data.DataLoader(
+            train_dataset, shuffle=True, num_workers=num_workers, batch_size=batch_size
+        )
+
+        test_taskloader = torch.utils.data.DataLoader(
+            test_dataset, num_workers=num_workers, batch_size=batch_size
+        )
+
+        if model_adapter_search_param in [None, "StandardNet"]:
+            search_adaptater = StandardNetSearcher(device, len(train_dataset.classes))
+
+        elif model_adapter_search_param == "RelationNet":
+            search_adaptater = RelationNetSearcher(
+                device, few_shot_param, class_to_search_on
+            )
+
+        elif model_adapter_search_param == "RelationNetFull":
+            search_adaptater = RelationNetSearcher(device, few_shot_param, [])
+
+        elif model_adapter_search_param == "ProtoNet":
+            search_adaptater = ProtoNetSearcher(
+                device, few_shot_param, class_to_search_on
+            )
+
+        elif model_adapter_search_param == "ProtoNetFull":
+            search_adaptater = ProtoNetSearcher(device, few_shot_param, [])
+
+        elif model_adapter_search_param == "Entropy":
+            model_adapter_search = EntropyAdaptater(resnet_model, device)
+            search_adaptater = NoAdditionalSearcher(model_adapter_search)
+
+        elif model_adapter_search_param == "Random":
+            model_adapter_search = RandomAdaptater(resnet_model, device)
+            search_adaptater = NoAdditionalSearcher(model_adapter_search)
+
+        search_adaptater.train_searcher(train_dataset, eval_dataset, num_workers)
+
+        ## search
+
+        for class_ in class_to_search_on:
+
+
+
+            top, relation = search_and_get_top(
+                search_adaptater.model_adapter,
+                class_,
+                test_taskloader,
+                train_loader.dataset,
+            )
+            #  plot_search(
+                #      50,
+                #      top,
+                #      relation,
+                #      test_dataset,
+                #      figsize=(15, 15),
+                #      ncols=6,
+                #  )
+            #
+
+            class_ = class_.item()
+            data_available = len(test_dataset.get_index_in_class(class_)) 
+            scores["class"].append(class_)
+            scores["run_id"].append(run_id)
+            scores["data_available"].append(data_available)
+
+
+            for topX in top_to_select:
+                count = count_in_top(top[:topX], class_, test_dataset)
+                scores[f"t{topX}"].append(count)
+                scores[f"s{topX}"].append(count/min(topX,data_available))
+
+        if callback is not None:
+            callback(train_dataset, eval_dataset, test_dataset)
+
+    scores_df = pd.DataFrame(scores)
+
+    return scores_df
