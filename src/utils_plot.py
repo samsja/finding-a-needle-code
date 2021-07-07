@@ -31,9 +31,8 @@ def plot_list(images,title=None,ncols=4,figsize=(8,8),img_from_tensor=img_from_t
     
     fig = plt.figure(figsize=figsize)
     columns = ncols
-    rows = quotient  if rest > 0 else 1
-
-    for i in range(1, columns * rows + 1):
+    rows = quotient + 1  if rest > 0 else 1
+    for i in range(1, len(images)+1):
         fig.add_subplot(rows, columns, i)
         imshow(images[i - 1],title=title[i-1] if title is not None else None)
         plt.axis("off")
