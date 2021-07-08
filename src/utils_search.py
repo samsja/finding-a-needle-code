@@ -138,6 +138,52 @@ def move_found_images(datapoint_to_add, train_dataset, test_dataset):
     # assert(len(train_dataset) + len(test_dataset)  == len_train + len_test)
 
 
+def train_and_search(
+    mask,
+    epochs,
+    train_loader,
+    val_loader,
+    test_taskloader,
+    trainer,
+    optim_resnet,
+    scheduler_resnet,
+    model_adaptater_search,
+    top_to_select=1,
+    treshold=0.5,
+    only_true_image=True,
+    checkpoint=True,
+    nb_of_eval=1,
+    search=True,
+):
+
+    trainer.fit(
+        epochs,
+        nb_of_eval,
+        optim_resnet,
+        scheduler_resnet,
+        train_loader,
+        val_loader,
+        silent=True,
+    )
+    if checkpoint:
+        trainer.model_adaptater.model = trainer.model_checkpoint
+
+    if search:
+        class_to_rebalanced = mask
+
+        for class_ in class_to_rebalanced:
+            datapoint_to_add = found_new_images(
+                model_adaptater_search,
+                class_,
+                test_taskloader,
+                train_loader.dataset,
+                top_to_select=top_to_select,
+            )
+            move_found_images(
+                datapoint_to_add, train_loader.dataset, test_taskloader.dataset
+            )
+
+
 def search_and_get_top(
     model_adapter,
     class_,
