@@ -74,9 +74,7 @@ def init_few_shot_dataset(train_dataset, class_to_search_on, num_workers=5):
     return few_shot_taskloader
 
 
-def init_dataset(
-    path_data, class_to_search_on, support_filenames, N=1, limit_search=None
-):
+def init_dataset_raw(path_data):
 
     transform, transform_test = get_transform()
 
@@ -110,6 +108,15 @@ def init_dataset(
         train_eval, transform=transform_test, root_dir=path_data, label_list=label_list
     )
 
+    return train_dataset,eval_dataset,test_dataset
+
+
+def init_dataset(
+    path_data, class_to_search_on, support_filenames, N=1, limit_search=None
+):
+
+    train_dataset,eval_dataset,test_dataset =  init_dataset_raw(path_data)
+    
     support_index = {}
     for class_ in class_to_search_on:
 
@@ -194,7 +201,21 @@ def get_data_25_rare(path_data, N, limit_search=None):
         ]
     ).long()
 
-    support_filenames = {}
+
+    support_filenames = {
+        263: [f"{path_data}/patches/warning--winding-road-first-right--g3/1rPRee8UZKlRqeRGPkVmHSA.jpg"],
+        309: [f"{path_data}/patches/regulatory--bicycles-only--g2/2sMC4I8VfvZ8or_lhJv9adw.jpg"],
+        254: [f"{path_data}/patches/regulatory--no-parking-or-no-stopping--g5/43CkesMYM4L226r2cfDxeWQ.jpg"],
+        290: [f"{path_data}/patches/regulatory--bicycles-only--g3/4J8sy1kBZ3JIh7zpMglbvFQ.jpg"],
+        146: [f"{path_data}/patches/warning--t-roads--g2/8wG_KUY743OkU5T39SdXb1w.jpg"],
+        275: [f"{path_data}/patches/regulatory--maximum-speed-limit-led-80--g1/2kbObURhSNEctmYjwvKwpow.jpg"],
+        176 :[f"{path_data}/patches/information--interstate-route--g1/66EQvCrRMh6QLJh1rDe3TzA.jpg"],
+        178 :[f"{path_data}/patches/information--airport--g1/9J5YUPUr_3hNc4MXgy-IfIw.jpg"],
+        234 :[f"{path_data}/patches/regulatory--triple-lanes-turn-left-center-lane--g1/2XkDjCZm8sxwszkTQEqHWtw.jpg"],
+        20 :[f"{path_data}/patches/regulatory--pedestrians-only--g2/5xILijMFXCO1Jm9qSyb78TA.jpg"],
+        271 :[f"{path_data}/patches/complementary--buses--g1/7nT5RAgHRq8k5dow-OQA-xw.jpg"],
+        273 :[f"{path_data}/patches/information--telephone--g1/2gQ4_1gp-V9YSuXL7WDf9eQ.jpg"],
+    }
     return class_to_search_on, lambda: init_dataset(
         path_data, class_to_search_on, support_filenames, N=N, limit_search=limit_search
     )
