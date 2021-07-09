@@ -1,4 +1,5 @@
 import torch
+import pandas as pd
 from tqdm.autonotebook import tqdm
 
 from src.few_shot_learning.relation_net import (
