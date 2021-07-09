@@ -1,6 +1,4 @@
 import torch
-import matplotlib.pyplot as plt
-import pandas as pd
 from tqdm.autonotebook import tqdm
 
 from src.few_shot_learning.relation_net import (
@@ -23,48 +21,21 @@ from src.searcher.searcher import (
 
 from src.datasource import few_shot_param
 
+from src.utils_plot import (
+    plot_score_one_class,
+    plot_score,
+    plot_score_model,
+    plot_mean,
+    plot_all_model_mean,
+    plot_search,
+    plot_image_to_find,
+)
+
 
 def count_in_top(top, class_, test_dataset):
     top_labels = [test_dataset[idx]["label"].item() for idx in top]
     return top_labels.count(class_)
 
-
-def plot_search(
-    n,
-    top,
-    relation,
-    test_dataset,
-    figsize=(7, 7),
-    img_from_tensor=img_from_tensor,
-    ncols=4,
-):
-    top_n = torch.stack([test_dataset[i.item()]["img"] for i in top[0:n]])
-    title = ["{:.2f}".format(r.item()) for r in relation[0:n]]
-
-    plot_list(
-        top_n,
-        title=title,
-        figsize=figsize,
-        img_from_tensor=img_from_tensor,
-        ncols=ncols,
-    )
-
-
-def plot_image_to_find(class_to_search_for, test_dataset, relation, top, max_len=10):
-
-    index_to_find = test_dataset.get_index_in_class(class_to_search_for)
-    max_len = min(max_len, len(index_to_find) - 1)
-
-    index_to_find = index_to_find[:max_len]
-
-    top = top.squeeze(1)
-    relation = torch.stack([relation[top == i] for i in index_to_find])
-
-    title = ["{:.2f}".format(r.item()) for r in relation]
-
-    target_images = torch.stack([test_dataset[i]["img"] for i in index_to_find])
-
-    plot_list(target_images, title=title)
 
 
 def search_rare_class(
@@ -119,13 +90,16 @@ def search_rare_class(
         relation,
     )
 
+
 import copy
+
+
 def move_found_images(datapoint_to_add, train_dataset, test_dataset):
     len_train, len_test = len(train_dataset), len(test_dataset)
 
     #  tr_d = copy.deepcopy(train_dataset)
     #  test_d = copy.deepcopy(test_dataset)
-#
+    #
     for class_ in datapoint_to_add.keys():
         for datapoint in datapoint_to_add[class_]:
             train_dataset.add_datapoint(
@@ -136,17 +110,18 @@ def move_found_images(datapoint_to_add, train_dataset, test_dataset):
     for class_ in datapoint_to_add.keys():
         for idx in datapoint_to_add[class_]:
             idx_to_remove.append(idx)
-    
+
     test_dataset.remove_datapoints(idx_to_remove)
 
     train_dataset.update_classes_indexes()
     test_dataset.update_classes_indexes()
 
-   #
-    #  try :
-    #      assert(len(train_dataset) + len(test_dataset)  == len_train + len_test)
-    #  except AssertionError:
-    #      breakpoint()
+
+#
+#  try :
+#      assert(len(train_dataset) + len(test_dataset)  == len_train + len_test)
+#  except AssertionError:
+#      breakpoint()
 #
 def train_and_search(
     mask,
@@ -246,54 +221,6 @@ def found_new_images(
         datapoint_to_add[class_data] = torch.Tensor(datapoint_to_add[class_data]).long()
 
     return datapoint_to_add
-
-
-def plot_score_one_class(score, class_, scores_df):
-    plt.plot(list(scores_df[scores_df["class"] == class_][score]), label=f"{class_}")
-
-
-def plot_mean(score, scores_df):
-    plt.plot(
-        list(scores_df[["iteration", score]].groupby(["iteration"]).mean()[score]),
-        label="mean",
-        linewidth=4,
-    )
-
-
-def plot_score(score, scores_df):
-    for class_ in scores_df["class"].unique():
-        plot_score_one_class(score, class_, scores_df)
-
-    plot_mean(score, scores_df)
-    plt.title(f"{score}")
-    plt.legend(
-        loc="upper center",
-        bbox_to_anchor=(0.5, -0.05),
-        fancybox=True,
-        shadow=True,
-        ncol=5,
-    )
-
-
-def plot_score_model(score, model, scores_df):
-    plot_score(score, scores_df[scores_df["model"] == model])
-
-
-def plot_all_model_mean(score, scores_df):
-    for model in scores_df["model"].unique():
-        df = scores_df[scores_df["model"] == model]
-        plt.plot(
-            list(df[["iteration", score]].groupby(["iteration"]).mean()[score]),
-            label=model,
-        )
-    plt.title(f"{score}")
-    plt.legend(
-        loc="upper center",
-        bbox_to_anchor=(0.5, -0.05),
-        fancybox=True,
-        shadow=True,
-        ncol=5,
-    )
 
 
 class EntropyAdaptater:

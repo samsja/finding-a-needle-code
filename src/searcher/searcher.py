@@ -160,7 +160,7 @@ class ProtoNetSearcher(Searcher):
 class StandardNetSearcher(Searcher):
 
     lr = 1e-3
-    epochs = 20
+    epochs = 1
     nb_eval = epochs
     batch_size = 256
 
