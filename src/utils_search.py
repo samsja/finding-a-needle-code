@@ -38,59 +38,6 @@ def count_in_top(top, class_, test_dataset):
 
 
 
-def search_rare_class(
-    class_to_search_for,
-    idx_support,
-    model,
-    train_dataset,
-    test_dataset,
-    batch_size,
-    test_taskloader,
-    device,
-    model_adaptater,
-    plot=False,
-    tqdm_silent=False,
-    max_len=10,
-):
-    support_img = torch.stack([train_dataset[idx]["img"] for idx in idx_support])
-
-    top, relation = model_adaptater.search_tensor(
-        test_taskloader, support_img, class_to_search_for, tqdm_silent=tqdm_silent
-    )
-
-    if plot:
-        imshow(support_img[0])
-
-    t20 = count_in_top(top[:20], class_to_search_for, test_dataset)
-    t100 = count_in_top(top[:100], class_to_search_for, test_dataset)
-    t5 = count_in_top(top[:5], class_to_search_for, test_dataset)
-    t1000 = count_in_top(top[:1000], class_to_search_for, test_dataset)
-
-    if plot:
-        plot_search(
-            50,
-            top,
-            relation,
-            test_dataset,
-            figsize=(15, 15),
-            ncols=6,
-        )
-
-        plot_image_to_find(
-            class_to_search_for, test_dataset, relation, top, max_len=max_len
-        )
-
-    return (
-        len(test_dataset.get_index_in_class(class_to_search_for)),
-        t5,
-        t20,
-        t100,
-        t1000,
-        top,
-        relation,
-    )
-
-
 import copy
 
 
