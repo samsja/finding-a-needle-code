@@ -221,7 +221,7 @@ def get_data_25_rare(path_data, N, limit_search=None):
     )
 
 def prepare_dataset(
-    class_to_search_for, idx_support, train_dataset, test_dataset, remove=False,limit_search=None
+    class_to_search_for, idx_support, train_dataset, test_dataset, remove,limit_search=None
 ):
 
     index_in_class = train_dataset.get_index_in_class(class_to_search_for)
@@ -265,8 +265,9 @@ def prepare_dataset(
         ), f"something wrong with class length {class_to_search_for}"
 
     if limit_search is not None:
-        
-        idx_to_remove = test_dataset.get_index_in_class(class_to_search_for)[:-limit_search].tolist()
-        test_dataset.remove_datapoints(idx_to_remove)
-        test_dataset.update_classes_indexes()
- 
+       
+        if limit_search < len(test_dataset.get_index_in_class(class_to_search_for)):
+            idx_to_remove = test_dataset.get_index_in_class(class_to_search_for)[:-limit_search].tolist()
+            test_dataset.remove_datapoints(idx_to_remove)
+            test_dataset.update_classes_indexes()
+     

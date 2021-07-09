@@ -17,6 +17,8 @@ if __name__ == "__main__":
     parser.add_argument("--result_file",type=str)
     parser.add_argument("--limit_search",default=None,type=int)
     parser.add_argument("--path_data",default= "/staging/thesis_data_search/data",type=str)
+    parser.add_argument("--dataset",default=0,type=int)
+
 
     args = parser.parse_args()
 
@@ -29,8 +31,10 @@ if __name__ == "__main__":
 
 
     path_data = args.path_data
+    
+    datasc = [get_data_6_rare,get_data_25_rare]
+    class_to_search_on,init_data = datasc[args.dataset](path_data,N,args.limit_search)
 
-    class_to_search_on,init_data = get_data_6_rare(path_data,N,args.limit_search)
 
     scores_df = exp_searching(
         N,

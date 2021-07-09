@@ -1,7 +1,7 @@
 import torch
 
 from src.utils_active_loop import exp_active_loop
-from src.datasource import get_data_6_rare
+from src.datasource import get_data_6_rare,get_data_25_rare
 
 
 import argparse
@@ -19,7 +19,8 @@ if __name__ == "__main__":
     parser.add_argument("--result_file",type=str)
     parser.add_argument("--limit_search",default=None,type=int)
     parser.add_argument("--path_data",default= "/staging/thesis_data_search/data",type=str)
-
+    parser.add_argument("--dataset",default=0,type=int)
+    
     args = parser.parse_args()
 
     print(args)
@@ -37,7 +38,9 @@ if __name__ == "__main__":
     lr = 1e-3
 
     path_data = args.path_data
-    class_to_search_on,init_data = get_data_6_rare(path_data,N,args.limit_search)
+
+    datasc = [get_data_6_rare,get_data_25_rare]
+    class_to_search_on,init_data = datasc[args.dataset](path_data,N,args.limit_search)
 
 
     scores_df = exp_active_loop(
