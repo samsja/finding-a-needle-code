@@ -2,7 +2,7 @@ import torch
 
 from src.utils_search import exp_searching
 
-from src.datasource import get_data_6_rare, get_data_25_rare
+from src.datasource import get_data_6_rare, get_data_25_rare,get_data_6_rare_sy
 
 import argparse
 
@@ -32,7 +32,7 @@ if __name__ == "__main__":
 
     path_data = args.path_data
     
-    datasc = [get_data_6_rare,get_data_25_rare]
+    datasc = [get_data_6_rare,get_data_25_rare,get_data_6_rare_sy]
     class_to_search_on,init_data = datasc[args.dataset](path_data,N,args.limit_search)
 
 

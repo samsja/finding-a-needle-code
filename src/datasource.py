@@ -12,7 +12,7 @@ from torchvision.models import resnet18
 from src.few_shot_learning.datasets import FewShotDataSet
 from collections import namedtuple
 
-
+import copy
 
 def get_transform():
     transform = torchvision.transforms.Compose(
@@ -74,7 +74,7 @@ def init_few_shot_dataset(train_dataset, class_to_search_on, num_workers=5):
     return few_shot_taskloader
 
 
-def init_dataset_raw(path_data):
+def init_dataset_raw(path_data, synthetic: list = []):
 
     transform, transform_test = get_transform()
 
@@ -96,6 +96,8 @@ def init_dataset_raw(path_data):
         train_ += fns[:ratio]
         val_ += fns[ratio:]
 
+    train_ = train_ + synthetic
+
     train_dataset = TrafficSignDataset(
         train_, label_list, transform=transform, root_dir=path_data
     )
@@ -108,15 +110,20 @@ def init_dataset_raw(path_data):
         train_eval, transform=transform_test, root_dir=path_data, label_list=label_list
     )
 
-    return train_dataset,eval_dataset,test_dataset
+    return train_dataset, eval_dataset, test_dataset
 
 
 def init_dataset(
-    path_data, class_to_search_on, support_filenames, N=1, limit_search=None
+    path_data,
+    class_to_search_on,
+    support_filenames,
+    N=1,
+    limit_search=None,
+    synthetic: list = [],
 ):
 
-    train_dataset,eval_dataset,test_dataset =  init_dataset_raw(path_data)
-    
+    train_dataset, eval_dataset, test_dataset = init_dataset_raw(path_data, synthetic)
+
     support_index = {}
     for class_ in class_to_search_on:
 
@@ -170,6 +177,55 @@ def get_data_6_rare(path_data, N, limit_search=None):
     )
 
 
+def support_to_list(support_filenames):
+    support_list = []
+
+    for class_ in support_filenames.keys():
+        for filename in support_filenames[class_]:
+            support_list.append(filename)
+    return support_list
+
+
+def add_path_data_to_support_filenames(support_filenames,path_data):
+    
+    support_filenames = copy.deepcopy(support_filenames)
+
+    for class_ in support_filenames.keys():
+        fn_with_path = []
+        for fn in support_filenames[class_]:
+            fn_with_path.append(f"{path_data}/{fn}")
+        support_filenames[class_] = fn_with_path
+
+    return support_filenames
+
+def get_data_6_rare_sy(path_data, N, limit_search=None):
+    class_to_search_on = torch.Tensor([25, 26,32,95, 152, 175]).long()
+
+    support_filenames = {
+        25: [
+            f"artificial/warning--slippery-road-surface--g1/artificial_0.jpg"
+        ],
+        26: [f"artificial/warning--curve-left--g1/artificial_0.jpg"],
+        32: [f"artificial/regulatory--no-overtaking--g2/artificial_0.jpg"],
+        95:[f"artificial/regulatory--no-stopping--g2/artificial_0.jpg"],
+        152: [
+            f"artificial/regulatory--maximum-speed-limit-20--g1/artificial_0.jpg"
+        ],
+        175: [
+            f"artificial/warning--slippery-road-surface--g2/artificial_0.jpg"
+        ],
+    }
+
+    return class_to_search_on, lambda: init_dataset(
+        path_data,
+        class_to_search_on,
+        add_path_data_to_support_filenames(support_filenames,path_data),
+        N=N,
+        limit_search=limit_search,
+        synthetic=support_to_list(support_filenames),
+    )
+
+
 def get_data_25_rare(path_data, N, limit_search=None):
     class_to_search_on = torch.Tensor(
         [
@@ -201,28 +257,56 @@ def get_data_25_rare(path_data, N, limit_search=None):
         ]
     ).long()
 
-
     support_filenames = {
-        263: [f"{path_data}/patches/warning--winding-road-first-right--g3/1rPRee8UZKlRqeRGPkVmHSA.jpg"],
-        309: [f"{path_data}/patches/regulatory--bicycles-only--g2/2sMC4I8VfvZ8or_lhJv9adw.jpg"],
-        254: [f"{path_data}/patches/regulatory--no-parking-or-no-stopping--g5/43CkesMYM4L226r2cfDxeWQ.jpg"],
-        290: [f"{path_data}/patches/regulatory--bicycles-only--g3/4J8sy1kBZ3JIh7zpMglbvFQ.jpg"],
+        263: [
+            f"{path_data}/patches/warning--winding-road-first-right--g3/1rPRee8UZKlRqeRGPkVmHSA.jpg"
+        ],
+        309: [
+            f"{path_data}/patches/regulatory--bicycles-only--g2/2sMC4I8VfvZ8or_lhJv9adw.jpg"
+        ],
+        254: [
+            f"{path_data}/patches/regulatory--no-parking-or-no-stopping--g5/43CkesMYM4L226r2cfDxeWQ.jpg"
+        ],
+        290: [
+            f"{path_data}/patches/regulatory--bicycles-only--g3/4J8sy1kBZ3JIh7zpMglbvFQ.jpg"
+        ],
         146: [f"{path_data}/patches/warning--t-roads--g2/8wG_KUY743OkU5T39SdXb1w.jpg"],
-        275: [f"{path_data}/patches/regulatory--maximum-speed-limit-led-80--g1/2kbObURhSNEctmYjwvKwpow.jpg"],
-        176 :[f"{path_data}/patches/information--interstate-route--g1/66EQvCrRMh6QLJh1rDe3TzA.jpg"],
-        178 :[f"{path_data}/patches/information--airport--g1/9J5YUPUr_3hNc4MXgy-IfIw.jpg"],
-        234 :[f"{path_data}/patches/regulatory--triple-lanes-turn-left-center-lane--g1/2XkDjCZm8sxwszkTQEqHWtw.jpg"],
-        20 :[f"{path_data}/patches/regulatory--pedestrians-only--g2/5xILijMFXCO1Jm9qSyb78TA.jpg"],
-        271 :[f"{path_data}/patches/complementary--buses--g1/7nT5RAgHRq8k5dow-OQA-xw.jpg"],
-        273 :[f"{path_data}/patches/information--telephone--g1/2gQ4_1gp-V9YSuXL7WDf9eQ.jpg"],
+        275: [
+            f"{path_data}/patches/regulatory--maximum-speed-limit-led-80--g1/2kbObURhSNEctmYjwvKwpow.jpg"
+        ],
+        176: [
+            f"{path_data}/patches/information--interstate-route--g1/66EQvCrRMh6QLJh1rDe3TzA.jpg"
+        ],
+        178: [
+            f"{path_data}/patches/information--airport--g1/9J5YUPUr_3hNc4MXgy-IfIw.jpg"
+        ],
+        234: [
+            f"{path_data}/patches/regulatory--triple-lanes-turn-left-center-lane--g1/2XkDjCZm8sxwszkTQEqHWtw.jpg"
+        ],
+        20: [
+            f"{path_data}/patches/regulatory--pedestrians-only--g2/5xILijMFXCO1Jm9qSyb78TA.jpg"
+        ],
+        271: [
+            f"{path_data}/patches/complementary--buses--g1/7nT5RAgHRq8k5dow-OQA-xw.jpg"
+        ],
+        273: [
+            f"{path_data}/patches/information--telephone--g1/2gQ4_1gp-V9YSuXL7WDf9eQ.jpg"
+        ],
     }
     return class_to_search_on, lambda: init_dataset(
         path_data, class_to_search_on, support_filenames, N=N, limit_search=limit_search
     )
 
+
 def prepare_dataset(
-    class_to_search_for, idx_support, train_dataset, test_dataset, remove,limit_search=None
+    class_to_search_for,
+    idx_support,
+    train_dataset,
+    test_dataset,
+    remove,
+    limit_search=None,
 ):
+
 
     index_in_class = train_dataset.get_index_in_class(class_to_search_for)
 
@@ -231,7 +315,7 @@ def prepare_dataset(
             train_dataset.data[idx]
             for idx in train_dataset.get_index_in_class(class_to_search_for)
         ], f"support {supp} does not belong to the class {class_to_search_for}"
-
+    
     for idx in index_in_class:
         if train_dataset.data[idx] not in idx_support:
             test_dataset.add_datapoint(
@@ -253,21 +337,21 @@ def prepare_dataset(
             index_in_class
         ), f"{class_to_search_for} {len(idx_to_remove)} , {len(idx_support)}  == {len(index_in_class)}"
 
-
         train_dataset.remove_datapoints(idx_to_remove)
 
     test_dataset.update_classes_indexes()
     train_dataset.update_classes_indexes()
 
-    if remove :
+    if remove:
         assert train_dataset.get_index_in_class(class_to_search_for).shape[0] == len(
             idx_support
         ), f"something wrong with class length {class_to_search_for}"
 
     if limit_search is not None:
-       
+
         if limit_search < len(test_dataset.get_index_in_class(class_to_search_for)):
-            idx_to_remove = test_dataset.get_index_in_class(class_to_search_for)[:-limit_search].tolist()
+            idx_to_remove = test_dataset.get_index_in_class(class_to_search_for)[
+                :-limit_search
+            ].tolist()
             test_dataset.remove_datapoints(idx_to_remove)
             test_dataset.update_classes_indexes()
-     
