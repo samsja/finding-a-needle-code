@@ -2,14 +2,16 @@ import numpy as np
 import torch
 import matplotlib.pyplot as plt
 
+
 def img_from_tensor(inp):
     inp = inp.to("cpu").numpy().transpose((1, 2, 0))
     mean = np.array([0.485, 0.456, 0.406])
     std = np.array([0.229, 0.224, 0.225])
     inp = std * inp + mean
     inp = np.clip(inp, 0, 1)
-    
+
     return inp
+
 
 def imshow(inp, title=None):
     """Imshow for Tensor."""
@@ -20,27 +22,26 @@ def imshow(inp, title=None):
         plt.title(title)
 
 
-def plot_list(images,title=None,ncols=4,figsize=(8,8),img_from_tensor=img_from_tensor):
-   
-
+def plot_list(
+    images, title=None, ncols=4, figsize=(8, 8), img_from_tensor=img_from_tensor
+):
 
     if ncols > len(images):
         ncols = len(images)
 
     quotient = len(images) // ncols
     rest = len(images) % ncols
-   
+
     fig = plt.figure(figsize=figsize)
     columns = ncols
-    rows = quotient + 1  if rest > 0 else quotient
-    for i in range(1, len(images)+1):
+    rows = quotient + 1 if rest > 0 else quotient
+    for i in range(1, len(images) + 1):
         fig.add_subplot(rows, columns, i)
-        imshow(images[i - 1],title=title[i-1] if title is not None else None)
+        imshow(images[i - 1], title=title[i - 1] if title is not None else None)
         plt.axis("off")
-    
+
         fig.subplots_adjust(wspace=0, hspace=0)
     plt.show()
-
 
 
 def plot_search(
@@ -78,8 +79,7 @@ def plot_image_to_find(class_to_search_for, test_dataset, relation, top, max_len
 
     target_images = torch.stack([test_dataset[i]["img"] for i in index_to_find])
 
-    plot_list(target_images, title=title,ncols=6,figsize=(15,15))
-
+    plot_list(target_images, title=title, ncols=6, figsize=(15, 15))
 
 
 def plot_score_one_class(score, class_, scores_df):
@@ -113,22 +113,64 @@ def plot_score_model(score, model, scores_df):
     plot_score(score, scores_df[scores_df["model"] == model])
 
 
-def plot_all_model_mean(score, scores_df):
-    for model in scores_df["model"].unique():
-        df = scores_df[scores_df["model"] == model]
-        plt.plot(
-            list(df[["iteration", score]].groupby(["iteration"]).mean()[score]),
-            label=model,
-        )
-    plt.title(f"{score}")
+
+def plot_all_model_mean(all_scores, scores_df,figsize=(10,15)):
+
+    df = scores_df.groupby(["iteration","run_id","model"],as_index=False).mean()
+    df_conf = df.groupby(["model","iteration"],as_index=False).apply(lambda x : int_conf(x,conf=0.95))
+    df_mean = df.groupby(["model","iteration"],as_index=False).mean()
+
+    fig = plt.figure(figsize=figsize)
+        
+
+    
+    for i,score in enumerate(all_scores):
+       
+
+        fig.add_subplot(len(all_scores) + 1, 1, i+1)
+        
+        for model in scores_df["model"].unique():
+            df_model = df_mean[df_mean["model"] == model]
+            x =  range(len(list(df_model[score])))
+            y =  df_model[score]
+           
+
+            
+            plt.plot(
+                x,
+                y,
+                label=model,
+                marker=".",
+                linestyle=":",
+                linewidth=2,
+            )
+
+            df_model_conf = df_conf[df_conf["model"] == model]
+            ci = df_model_conf[score]
+            plt.fill_between(x, (y-ci),(y+ci),alpha=0.1)
+
+
+            plt.grid(color="grey", linewidth=1, axis="both", alpha=0.5)
+
+            plt.ylabel(f"{score}")
+
     plt.legend(
         loc="upper center",
-        bbox_to_anchor=(0.5, -0.05),
+        bbox_to_anchor=(0.5, -0.15),
         fancybox=True,
         shadow=True,
-        ncol=5,
+        ncol=2,
     )
 
 
+import scipy
+from scipy import stats
 
-
+def int_conf(series, conf=0.95):
+    n = len(series)
+    m = series.mean()
+    s = series.var()
+    proba = (1 - conf) * 100
+    proba = (100 - proba / 2) / 100
+    ddl = n - 1
+    return np.sqrt(s / n) * scipy.stats.norm.ppf(proba, ddl)
