@@ -127,7 +127,7 @@ def plot_all_model_mean(all_scores, scores_df,figsize=(10,15)):
     for i,score in enumerate(all_scores):
        
 
-        fig.add_subplot(len(all_scores) + 1, 1, i+1)
+        fig.add_subplot(len(all_scores)//2 + 1, 2, i+1)
         
         for model in scores_df["model"].unique():
             df_model = df_mean[df_mean["model"] == model]
@@ -156,10 +156,9 @@ def plot_all_model_mean(all_scores, scores_df,figsize=(10,15)):
 
     plt.legend(
         loc="upper center",
-        bbox_to_anchor=(0.5, -0.15),
-        fancybox=True,
-        shadow=True,
-        ncol=2,
+        bbox_to_anchor=(-0.1, -0.15),
+        shadow=False,
+        ncol=4,
     )
 
 
