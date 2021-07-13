@@ -1,3 +1,6 @@
+
+
+
 import torch
 import torch.nn as nn
 
@@ -6,7 +9,12 @@ from sklearn.datasets import make_blobs, make_moons
 import matplotlib.pyplot as plt
 from tqdm.auto import tqdm
 
-def make_blob_torch(n_samples,centers,cluster_std,random_state,ratio,device):
+import ipywidgets as widgets
+from ipywidgets import fixed, interact, interact_manual, interactive
+
+
+
+def make_blob_torch(n_samples, centers, cluster_std, random_state, ratio, device):
     X, y = make_blobs_few_shot(
         *make_blobs(
             n_samples=n_samples,
@@ -14,13 +22,14 @@ def make_blob_torch(n_samples,centers,cluster_std,random_state,ratio,device):
             cluster_std=cluster_std,
             random_state=random_state,
         ),
-        ratio
+        ratio,
     )
 
     data = torch.from_numpy(X).float().to(device)
-    labels = torch.from_numpy(y).long().to(device) 
+    labels = torch.from_numpy(y).long().to(device)
 
-    return data,labels
+    return data, labels
+
 
 def make_blobs_few_shot(X, y, ratio):
     n = max(int(X[y == 0].shape[0] * ratio), 1)
@@ -74,7 +83,9 @@ def train_custom_loss(model, data, labels, lr=1e-2, epochs=100, callback=None):
 
         for class_, count in enumerate(distrib):
 
-            loss += loss_fn(outputs[labels == class_], labels[labels == class_])* ( sum(distrib)/ count)
+            loss += loss_fn(outputs[labels == class_], labels[labels == class_]) * (
+                sum(distrib) / count
+            )
 
         loss.backward()
         optim.step()
@@ -84,7 +95,7 @@ def train_custom_loss(model, data, labels, lr=1e-2, epochs=100, callback=None):
 
 def train_normal_loss(model, data, labels, lr=1e-2, epochs=100, callback=None):
     loss_fn = nn.CrossEntropyLoss()
-    optim = torch.optim.SGD(model.parameters(), lr=lr,momentum=0.9)
+    optim = torch.optim.SGD(model.parameters(), lr=lr, momentum=0.9)
 
     for idx_epoch in tqdm(range(epochs)):
 
@@ -109,19 +120,43 @@ def train_normal_loss(model, data, labels, lr=1e-2, epochs=100, callback=None):
 def vizu(model, X, y, device, figsize=(17, 7)):
     h = 0.05
     X = X.to("cpu")
-    y = y.to("cpu") 
+    y = y.to("cpu")
     x_min, x_max = X[:, 0].min() - 1, X[:, 0].max() + 1
     y_min, y_max = X[:, 1].min() - 1, X[:, 1].max() + 1
     xx, yy = np.meshgrid(np.arange(x_min, x_max, h), np.arange(y_min, y_max, h))
     Xmesh = np.c_[xx.ravel(), yy.ravel()]
 
-    _, Z = model(torch.from_numpy(Xmesh).float().to(device)).max(dim=1)
+    with torch.no_grad():
+        _, Z = model(torch.from_numpy(Xmesh).float().to(device)).max(dim=1)
 
     Z = Z.to("cpu").numpy().reshape(xx.shape)
 
     fig = plt.figure(figsize=figsize)
     plt.contourf(xx, yy, Z, cmap=plt.cm.Spectral, alpha=0.8)
     plt.scatter(X[:, 0], X[:, 1], c=y, s=40, cmap=plt.cm.Spectral)
+
+    plt.xlim(xx.min(), xx.max())
+    plt.ylim(yy.min(), yy.max())
+
+
+def vizu_proba(model, X, y, device, figsize=(17, 7)):
+    h = 0.05
+    X = X.to("cpu")
+    y = y.to("cpu")
+    x_min, x_max = X[:, 0].min() - 1, X[:, 0].max() + 1
+    y_min, y_max = X[:, 1].min() - 1, X[:, 1].max() + 1
+    xx, yy = np.meshgrid(np.arange(x_min, x_max, h), np.arange(y_min, y_max, h))
+    Xmesh = np.c_[xx.ravel(), yy.ravel()]
+
+    with torch.no_grad():
+        Z = model(torch.from_numpy(Xmesh).float().to(device)).softmax(dim=1)[:, 0]
+
+    Z = Z.to("cpu").numpy().reshape(xx.shape)
+
+    fig = plt.figure(figsize=figsize)
+    cs = plt.contourf(xx, yy, Z, cmap=plt.cm.get_cmap("magma_r"), alpha=0.8)
+    plt.colorbar(cs)
+    plt.scatter(X[:, 0], X[:, 1], c=y, s=40, cmap=plt.cm.magma)
 
     plt.xlim(xx.min(), xx.max())
     plt.ylim(yy.min(), yy.max())
@@ -137,6 +172,7 @@ def boxplot_proba_few_shot(model, X, y, device):
 
 
 import sympy as sp
+
 
 class SymbolicNN:
     def __init__(self, N):
@@ -182,3 +218,63 @@ class SymbolicNN:
             return 1 if (self.o(x, mu, mu) > self.o(x, 1 - mu, mu)).subs(subs) else 0
 
         return sum([acc(y) for y in Y])
+
+
+
+def get_main(device,holder):
+
+    @interact(
+        n_samples=widgets.IntSlider(
+            min=100, max=2000, step=100, value=100, continuous_update=False
+        ),
+        centers=widgets.IntSlider(min=2, max=10, step=1, value=2, continuous_update=False),
+        cluster_std=widgets.FloatSlider(
+            min=0, max=1, step=0.1, value=0.5, continuous_update=False
+        ),
+        ratio=widgets.FloatSlider(
+            min=0, max=1, step=0.01, value=1, continuous_update=False
+        ),
+        lr=widgets.FloatText(value=1e-2, description="lr:", disabled=False),
+        epochs=widgets.IntText(value=100, description="epochs:", disabled=False),
+        balanced_loss=widgets.Checkbox(
+            value=False, description="Balanced_loss", disabled=False, indent=False
+        ),
+        vizu_proba_flag=widgets.Checkbox(
+            value=False, description="Vizu proba", disabled=False, indent=False
+        ),
+        dist_center=widgets.FloatSlider(
+            min=0, max=1, step=0.1, value=0, continuous_update=False
+        ),
+    )
+    def main(
+        n_samples=1000,
+        centers=2,
+        dist_center =0,
+        cluster_std=0.5,
+        ratio=1,
+        lr=1e-2,
+        epochs=100,
+        balanced_loss=False,
+        vizu_proba_flag=False,
+    ):
+        if dist_center > 0 :
+           centers =  [[0,0],[-4*dist_center,8],[4*dist_center,8]]
+
+        rand_state = np.random.RandomState(2)
+
+        holder.data, holder.labels = make_blob_torch(n_samples,centers,cluster_std,rand_state,ratio,device)
+
+        holder.model, acc = train(
+            holder.data, holder.labels, device, lr, epochs, balanced_loss
+        )
+
+        vizu_f = vizu_proba if vizu_proba_flag else vizu
+        
+        vizu_f(holder.model, holder.data, holder.labels, device)
+
+        plt.show()
+
+        boxplot_proba_few_shot(holder.model, holder.data, holder.labels, device)
+        plt.show()
+
+    return main
