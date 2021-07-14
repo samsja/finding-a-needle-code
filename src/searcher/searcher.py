@@ -114,7 +114,7 @@ class ProtoNetSearcher(Searcher):
         self.debug = debug
         self.class_to_search_on = class_to_search_on
 
-        self.model = ProtoNet(3).cuda()
+        self.model = ProtoNet(3,pretrain=True).to(device)
 
         self.model_adapter = ProtoNetAdaptater(self.model, 1, 1, 1, 1, device)
 
@@ -171,7 +171,7 @@ class StandardNetSearcher(Searcher):
     def __init__(self, device, number_of_class, debug=False):
         self.device = device
         self.debug = debug
-        self.model = StandardNet(number_of_class).to(device)
+        self.model = StandardNet(number_of_class,pretrained=True).to(device)
         self.model_adapter = StandardNetAdaptater(self.model, device)
         self.trainer = TrainerFewShot(self.model_adapter, device, checkpoint=True)
 

@@ -15,12 +15,12 @@ class ProtoNet(torch.nn.Module):
         debug: bool. if true debug mode activate defaulf  False
     """
 
-    def __init__(self, in_channels: int, debug: bool = False):
+    def __init__(self, in_channels: int, debug: bool = False,pretrain=True):
         super().__init__()
 
         self.debug = debug
 
-        resnet = list(resnet18(pretrained=True).children())[:-1]
+        resnet = list(resnet18(pretrained=pretrain).children())[:-1]
         self.feature_extractor = nn.Sequential(*resnet)
 
     def forward(self, x):
