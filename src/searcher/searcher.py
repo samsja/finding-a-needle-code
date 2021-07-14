@@ -6,7 +6,6 @@ from src.few_shot_learning.utils_train import TrainerFewShot
 from src.few_shot_learning.datasets import FewShotDataSet
 
 
-
 from src.few_shot_learning import RelationNet, RelationNetAdaptater
 from src.few_shot_learning.relation_net import (
     BasicRelationModule,
@@ -15,10 +14,11 @@ from src.few_shot_learning.relation_net import (
 
 from src.few_shot_learning.proto_net import ProtoNet, ProtoNetAdaptater
 
-from src.datasource import init_few_shot_dataset
+from src.datasource import init_few_shot_dataset, copy_dataset_exclude_class
 
 
 from src.few_shot_learning.standard_net import StandardNet, StandardNetAdaptater
+
 
 class Searcher:
     def train_searcher(
@@ -42,7 +42,7 @@ class RelationNetSearcher(Searcher):
     epochs = 250
     nb_eval = 120
 
-    def __init__(self, device, few_shot_param,class_to_search_on,debug=False):
+    def __init__(self, device, few_shot_param, class_to_search_on, debug=False):
 
         self.debug = debug
         self.class_to_search_on = class_to_search_on
@@ -83,7 +83,9 @@ class RelationNetSearcher(Searcher):
             self.train_model_adapter, device, checkpoint=False
         )
 
-    def train_searcher(self, train_dataset: FewShotDataSet, val_dataset: FewShotDataSet, num_workers):
+    def train_searcher(
+        self, train_dataset: FewShotDataSet, val_dataset: FewShotDataSet, num_workers
+    ):
 
         few_shot_task_loader = init_few_shot_dataset(
             train_dataset, self.class_to_search_on, num_workers
@@ -97,7 +99,7 @@ class RelationNetSearcher(Searcher):
             self.scheduler,
             few_shot_task_loader,
             few_shot_task_loader,
-            silent=not(self.debug),
+            silent=not (self.debug),
         )
 
 
@@ -107,7 +109,7 @@ class ProtoNetSearcher(Searcher):
     epochs = 200
     nb_eval = 100
 
-    def __init__(self, device, few_shot_param,class_to_search_on,debug=False):
+    def __init__(self, device, few_shot_param, class_to_search_on, debug=False):
 
         self.debug = debug
         self.class_to_search_on = class_to_search_on
@@ -138,14 +140,16 @@ class ProtoNetSearcher(Searcher):
             self.train_model_adapter, device, checkpoint=False
         )
 
-    def train_searcher(self, train_dataset: FewShotDataSet, val_dataset: FewShotDataSet, num_workers):
+    def train_searcher(
+        self, train_dataset: FewShotDataSet, val_dataset: FewShotDataSet, num_workers
+    ):
 
         few_shot_task_loader = init_few_shot_dataset(
             train_dataset, self.class_to_search_on, num_workers
         )
 
         nb_eval = 1 if not self.debug else ProtoNetSearcher.nb_eval
-       
+
         self.trainer.fit(
             ProtoNetSearcher.epochs,
             nb_eval,
@@ -153,7 +157,7 @@ class ProtoNetSearcher(Searcher):
             self.scheduler,
             few_shot_task_loader,
             few_shot_task_loader,
-            silent=not(self.debug),    
+            silent=not (self.debug),
         )
 
 
@@ -164,42 +168,106 @@ class StandardNetSearcher(Searcher):
     nb_eval = epochs
     batch_size = 256
 
-    def __init__(self, device,number_of_class,debug=False):
+    def __init__(self, device, number_of_class, debug=False):
+        self.device = device
         self.debug = debug
         self.model = StandardNet(number_of_class).to(device)
         self.model_adapter = StandardNetAdaptater(self.model, device)
-        self.trainer = TrainerFewShot(self.model_adapter,device, checkpoint=True)
+        self.trainer = TrainerFewShot(self.model_adapter, device, checkpoint=True)
 
-        self.optim = torch.optim.Adam(self.model.parameters(), lr=StandardNetSearcher.lr)
+        self.optim = torch.optim.Adam(
+            self.model.parameters(), lr=StandardNetSearcher.lr
+        )
 
         self.scheduler = torch.optim.lr_scheduler.StepLR(
             self.optim, step_size=100000, gamma=0.9
         )
 
-
-
-
-    def train_searcher(self, train_dataset: FewShotDataSet, eval_dataset: FewShotDataSet, num_workers):
+    def _train(
+        self,
+        epochs,
+        nb_eval,
+        batch_size,
+        train_dataset: FewShotDataSet,
+        eval_dataset: FewShotDataSet,
+        num_workers,
+    ):
 
         train_loader = torch.utils.data.DataLoader(
-            train_dataset, shuffle=True, num_workers=num_workers, batch_size=StandardNetSearcher.batch_size
+            train_dataset,
+            shuffle=True,
+            num_workers=num_workers,
+            batch_size=batch_size,
         )
 
         val_loader = torch.utils.data.DataLoader(
-            eval_dataset, batch_size=StandardNetSearcher.batch_size, num_workers=num_workers
+            eval_dataset,
+            batch_size=batch_size,
+            num_workers=num_workers,
         )
 
         self.trainer.fit(
-            StandardNetSearcher.epochs,
-            StandardNetSearcher.nb_eval,
+            epochs,
+            nb_eval,
             self.optim,
             self.scheduler,
             train_loader,
             val_loader,
-            silent=not(self.debug),    
+            silent=not (self.debug),
         )
-        
+
         self.trainer.model_adaptater.model = self.trainer.model_checkpoint
 
+    def train_searcher(
+        self,
+        train_dataset: FewShotDataSet,
+        eval_dataset: FewShotDataSet,
+        num_workers,
+    ):
+        self._train(
+            StandardNetSearcher.epochs,
+            StandardNetSearcher.nb_eval,
+            StandardNetSearcher.batch_size,
+            train_dataset,
+            eval_dataset,
+            num_workers,
+        )
 
 
+class FreezedStandardNetSearcher(StandardNetSearcher):
+
+    epochs = 20
+
+    def __init__(
+        self, device, number_of_class, class_to_search_on, debug=False, num_worker=8
+    ):
+        super().__init__(device, number_of_class , debug)
+        self.class_to_search_on = class_to_search_on
+        self.num_worker = 8
+
+    def train_searcher(
+        self, train_dataset: FewShotDataSet, eval_dataset: FewShotDataSet, num_workers
+    ):
+
+
+        train_dataset_exclude = copy_dataset_exclude_class(train_dataset,self.class_to_search_on)
+        eval_dataset_exclude = copy_dataset_exclude_class(eval_dataset,self.class_to_search_on)
+
+        super().train_searcher(train_dataset_exclude, eval_dataset_exclude, num_workers)
+
+        self.model.resnet.fc = torch.nn.Linear(
+            self.model.resnet.fc.in_features,
+            self.model.resnet.fc.out_features + len(self.class_to_search_on),
+        )
+
+        self.model.freeze_mlp()
+        self.trainer = TrainerFewShot(self.model_adapter,self.device, checkpoint=True)
+
+        super()._train(
+            FreezedStandardNetSearcher.epochs,
+            FreezedStandardNetSearcher.epochs,
+            StandardNetSearcher.batch_size,
+            train_dataset,
+            eval_dataset,
+            num_workers,
+        )

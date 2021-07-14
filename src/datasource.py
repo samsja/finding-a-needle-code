@@ -14,6 +14,7 @@ from collections import namedtuple
 
 import copy
 
+
 def get_transform():
     transform = torchvision.transforms.Compose(
         [
@@ -48,14 +49,22 @@ FewShotParam = namedtuple(
 few_shot_param = FewShotParam(5, 1, 1, 50, 8)
 
 
-def init_few_shot_dataset(train_dataset, class_to_search_on, num_workers=5):
-
-    train_few_shot_dataset = TrafficSignDataset(
+def copy_dataset_exclude_class(train_dataset: TrafficSignDataset, class_to_exclude):
+    new_dataset = TrafficSignDataset(
         train_dataset.data,
         train_dataset.labels_str,
         train_dataset.transform,
         root_dir="",
-        exclude_class=class_to_search_on,
+        exclude_class=class_to_exclude,
+    )
+
+    return new_dataset
+
+
+def init_few_shot_dataset(train_dataset, class_to_search_on, num_workers=5):
+
+    train_few_shot_dataset = copy_dataset_exclude_class(
+        train_dataset, class_to_exclude=class_to_search_on
     )
 
     few_shot_sampler = FewShotSampler2(
@@ -186,8 +195,8 @@ def support_to_list(support_filenames):
     return support_list
 
 
-def add_path_data_to_support_filenames(support_filenames,path_data):
-    
+def add_path_data_to_support_filenames(support_filenames, path_data):
+
     support_filenames = copy.deepcopy(support_filenames)
 
     for class_ in support_filenames.keys():
@@ -198,28 +207,23 @@ def add_path_data_to_support_filenames(support_filenames,path_data):
 
     return support_filenames
 
+
 def get_data_6_rare_sy(path_data, N, limit_search=None):
-    class_to_search_on = torch.Tensor([25, 26,32,95, 152, 175]).long()
+    class_to_search_on = torch.Tensor([25, 26, 32, 95, 152, 175]).long()
 
     support_filenames = {
-        25: [
-            f"artificial/warning--slippery-road-surface--g1/artificial_0.jpg"
-        ],
+        25: [f"artificial/warning--slippery-road-surface--g1/artificial_0.jpg"],
         26: [f"artificial/warning--curve-left--g1/artificial_0.jpg"],
         32: [f"artificial/regulatory--no-overtaking--g2/artificial_0.jpg"],
-        95:[f"artificial/regulatory--no-stopping--g2/artificial_0.jpg"],
-        152: [
-            f"artificial/regulatory--maximum-speed-limit-20--g1/artificial_0.jpg"
-        ],
-        175: [
-            f"artificial/warning--slippery-road-surface--g2/artificial_0.jpg"
-        ],
+        95: [f"artificial/regulatory--no-stopping--g2/artificial_0.jpg"],
+        152: [f"artificial/regulatory--maximum-speed-limit-20--g1/artificial_0.jpg"],
+        175: [f"artificial/warning--slippery-road-surface--g2/artificial_0.jpg"],
     }
 
     return class_to_search_on, lambda: init_dataset(
         path_data,
         class_to_search_on,
-        add_path_data_to_support_filenames(support_filenames,path_data),
+        add_path_data_to_support_filenames(support_filenames, path_data),
         N=N,
         limit_search=limit_search,
         synthetic=support_to_list(support_filenames),
@@ -307,7 +311,6 @@ def prepare_dataset(
     limit_search=None,
 ):
 
-
     index_in_class = train_dataset.get_index_in_class(class_to_search_for)
 
     for supp in idx_support:
@@ -315,7 +318,7 @@ def prepare_dataset(
             train_dataset.data[idx]
             for idx in train_dataset.get_index_in_class(class_to_search_for)
         ], f"support {supp} does not belong to the class {class_to_search_for}"
-    
+
     for idx in index_in_class:
         if train_dataset.data[idx] not in idx_support:
             test_dataset.add_datapoint(

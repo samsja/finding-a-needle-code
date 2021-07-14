@@ -11,23 +11,19 @@ from src.few_shot_learning.relation_net import (
 
 from src.few_shot_learning.standard_net import StandardNet, StandardNetAdaptater
 
-from src.utils_plot import img_from_tensor, imshow, plot_list
+from src.utils_plot import imshow
 
 from src.searcher.searcher import (
     RelationNetSearcher,
     ProtoNetSearcher,
     NoAdditionalSearcher,
     StandardNetSearcher,
+    FreezedStandardNetSearcher
 )
 
 from src.datasource import few_shot_param
 
 from src.utils_plot import (
-    plot_score_one_class,
-    plot_score,
-    plot_score_model,
-    plot_mean,
-    plot_all_model_mean,
     plot_search,
     plot_image_to_find,
 )
@@ -287,6 +283,16 @@ def exp_searching(
 
         elif model_adapter_search_param == "ProtoNetFull":
             search_adaptater = ProtoNetSearcher(device, few_shot_param, [], debug=debug)
+
+        elif model_adapter_search_param == "FreezedStandardNet":
+            search_adaptater = FreezedStandardNetSearcher(
+                device, len(train_dataset.classes), class_to_search_on=class_to_search_on,debug=debug
+            )
+        else :
+            raise ValueError(f"{model_adapter_search_param} is incorect")
+
+
+
 
         search_adaptater.train_searcher(train_dataset, eval_dataset, num_workers)
 
