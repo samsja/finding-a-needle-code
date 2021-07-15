@@ -10,6 +10,8 @@ from PIL import Image
 from tqdm.autonotebook import tqdm
 from typing import List
 
+from torchvision.datasets.folder import default_loader
+
 def get_file_name_from_folder(root_dir, exclude_class):
 
     list_of_datapoints = []
@@ -103,7 +105,7 @@ class TrafficSignDataset(FewShotDataSet):
 
         url = self.data[idx]
 
-        x = Image.open(url)
+        x = default_loader(url)
         x = self.transform(x)
 
         if not(type(idx)==torch.Tensor):
