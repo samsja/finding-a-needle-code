@@ -6,7 +6,7 @@ from tqdm.autonotebook import tqdm
 import random
 import copy
 from typing import Iterator, Tuple
-
+import numpy as np
 
 class RotationTransform:
     """Rotate by one of the given angles."""
@@ -88,6 +88,7 @@ class TrainerFewShot:
         optim.step()
 
         return loss
+
 
     def _get_data_from_batch(self, batch):
 
@@ -199,7 +200,7 @@ class TrainerFewShot:
     def get_all_outputs(
         self, task_loader: torch.utils.data.DataLoader, silent=False
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        
+
         """
         return :
             outputs: torch.Tensor, the output of the model for the task loader
@@ -209,7 +210,7 @@ class TrainerFewShot:
         outputs = []
         true_labels = []
 
-        for batch_idx, batch in enumerate(tqdm(task_loader,disable=silent)):
+        for batch_idx, batch in enumerate(tqdm(task_loader, disable=silent)):
             with torch.no_grad():
                 self.model_adaptater.model.eval()
 
@@ -224,12 +225,12 @@ class TrainerFewShot:
         outputs = torch.cat(outputs)
         true_labels = torch.cat(true_labels)
 
-        return outputs,true_labels
+        return outputs, true_labels
 
     def get_all_preds(
         self, task_loader: torch.utils.data.DataLoader, silent=False
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        
+
         """
         return :
             preds: torch.Tensor, the pred of the model for the task loader
@@ -239,7 +240,7 @@ class TrainerFewShot:
         preds = []
         true_labels = []
 
-        for batch_idx, batch in enumerate(tqdm(task_loader,disable=silent)):
+        for batch_idx, batch in enumerate(tqdm(task_loader, disable=silent)):
             with torch.no_grad():
                 self.model_adaptater.model.eval()
 
@@ -252,12 +253,47 @@ class TrainerFewShot:
         preds = torch.cat(preds)
         true_labels = torch.cat(true_labels)
 
-        return preds,true_labels
-
+        return preds, true_labels
 
     def restore_checkpoint(self):
 
         self.model_adaptater.model = self.model_checkpoint
+
+    def find_lr(
+        self,
+        optim: torch.optim,
+        train_taskloader: torch.utils.data.DataLoader,
+        eval_taskloader: torch.utils.data.DataLoader,
+        min_lr=-5,
+        max_lr=1,
+        nb_step=10,
+        silent=False,
+    ):
+
+        model_init = copy.deepcopy(self.model_adaptater.model)
+
+        linspace_lr = np.logspace(min_lr, max_lr, nb_step)
+
+        losses = []
+
+        for lr in tqdm(linspace_lr, disable = silent ):
+
+            for param_group in optim.param_groups:
+                param_group["lr"] = lr
+
+            batch = next(iter(train_taskloader))
+            inputs, labels = self._get_data_from_batch(batch)
+
+            losses.append(
+                self.train_model(inputs.to(self.device), labels.to(self.device), optim)
+            )
+        losses = [loss.to("cpu").detach().numpy() for loss in losses ]
+
+        self.model_adaptater.model = model_init
+
+        plt.plot(linspace_lr,losses)
+        plt.xscale('log')
+        
 
 
 def get_miss_match_few_shot(
