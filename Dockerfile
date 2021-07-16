@@ -1,4 +1,4 @@
-FROM nvcr.io/nvidia/pytorch:21.05-py3
+FROM nvcr.io/nvidia/pytorch:21.06-py3
 # Create a working directory
 RUN mkdir /app
 WORKDIR /app
@@ -11,7 +11,7 @@ RUN conda install -c conda-forge jupyterlab_code_formatter
 RUN conda install -c conda-forge xeus-python 
 
 RUN conda install -c anaconda pip 
-RUN pip install tb-nightly
+RUN pip install torch_tb_profiler
 RUN pip install black isort
 
 

@@ -1,12 +1,20 @@
 import torchvision
 import torch
 import torch.nn as nn
+import torch.profiler
+
 import torchvision.transforms.functional as TF
 from tqdm.autonotebook import tqdm
 import random
 import copy
-from typing import Iterator, Tuple
+from typing import Iterator, Tuple,Callable
 import numpy as np
+
+import contextlib
+
+
+
+
 
 class RotationTransform:
     """Rotate by one of the given angles."""
@@ -109,6 +117,7 @@ class TrainerFewShot:
         eval_taskloader: torch.utils.data.DataLoader,
         silent=False,
         tqdm_on_batch=False,
+        profiler_call: Callable = None, 
     ):
         period_eval = max(epochs // nb_eval, 1)
 
@@ -118,18 +127,21 @@ class TrainerFewShot:
 
             self.model_adaptater.model.train()
 
-            for batch_idx, batch in enumerate(
-                tqdm(bg_taskloader, disable=not (tqdm_on_batch) or silent)
-            ):
+            with no_profiler() if profiler_call is None else profiler_call() as profiler:
+                for batch_idx, batch in enumerate(
+                    tqdm(bg_taskloader, disable=not (tqdm_on_batch) or silent)
+                ):
 
-                inputs, labels = self._get_data_from_batch(batch)
+                    inputs, labels = self._get_data_from_batch(batch)
 
-                loss = self.train_model(
-                    inputs.to(self.device), labels.to(self.device), optim
-                )
+                    loss = self.train_model(
+                        inputs.to(self.device), labels.to(self.device), optim
+                    )
 
-                list_loss_batch.append(loss.item())
-
+                    list_loss_batch.append(loss.item())
+                    
+                    profiler.step()
+                    
             self.list_loss.append(sum(list_loss_batch) / len(list_loss_batch))
 
             scheduler.step()
@@ -392,3 +404,17 @@ def plot_miss_match(miss_match_tuple, img_from_tensor=lambda x: x, figsize=(7, 7
         ax1[row, col].set_title(f"{miss_class[j]} {true_class[j]} \n {ro} {rt}")
 
         list_available[row] += 1
+
+
+
+class NoProfiler:
+
+    def step(self):
+        pass
+
+@contextlib.contextmanager
+def no_profiler():
+    yield NoProfiler()
+
+
+
