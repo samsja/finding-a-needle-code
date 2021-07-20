@@ -117,7 +117,7 @@ def plot_score_model(score, model, scores_df):
 def plot_all_model_mean(all_scores, scores_df,figsize=(10,15)):
 
     df = scores_df.groupby(["iteration","run_id","model"],as_index=False).mean()
-    df_conf = df.groupby(["model","iteration"],as_index=False).apply(lambda x : int_conf(x,conf=0.95))
+    df_conf = df.groupby(["model","iteration"],as_index=False).apply(lambda x :  int_conf_df(x,conf=0.95))
     df_mean = df.groupby(["model","iteration"],as_index=False).mean()
 
     fig = plt.figure(figsize=figsize)
@@ -161,15 +161,20 @@ def plot_all_model_mean(all_scores, scores_df,figsize=(10,15)):
         ncol=4,
     )
 
+import pandas as pd
+import numpy as np
+import scipy.stats as st
+def int_conf_series(series,conf=0.95):
+    min_int,max_int = st.t.interval(alpha=conf, df=len(series)-1, loc=series.mean(), scale=st.sem(series))
 
-import scipy
-from scipy import stats
+    return (max_int-min_int)/2
 
-def int_conf(series, conf=0.95):
-    n = len(series)
-    m = series.mean()
-    s = series.var()
-    proba = (1 - conf) * 100
-    proba = (100 - proba / 2) / 100
-    ddl = n - 1
-    return np.sqrt(s / n) * scipy.stats.norm.ppf(proba, ddl)
+def int_conf_df(df,conf=0.95):
+    series_conf = {}
+    for key in df.columns:
+        if df[key].dtype in [np.int64,np.float64]:
+            series_conf[key]=int_conf_series(df[key])
+        else :
+            series_conf[key]=df[key].iloc[0]
+
+    return pd.Series(series_conf)
