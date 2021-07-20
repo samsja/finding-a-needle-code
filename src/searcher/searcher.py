@@ -39,7 +39,7 @@ class NoAdditionalSearcher(Searcher):
 class RelationNetSearcher(Searcher):
 
     lr = 3e-4
-    epochs = 250
+    epochs = 400
     nb_eval = 120
 
     def __init__(self, device, few_shot_param, class_to_search_on, debug=False):
@@ -106,7 +106,7 @@ class RelationNetSearcher(Searcher):
 class ProtoNetSearcher(Searcher):
 
     lr = 3e-4
-    epochs = 200
+    epochs = 400
     nb_eval = 100
 
     def __init__(self, device, few_shot_param, class_to_search_on, debug=False):
@@ -130,7 +130,7 @@ class ProtoNetSearcher(Searcher):
         self.device = device
 
         self.optim = torch.optim.Adam(
-            self.model.parameters(), lr=RelationNetSearcher.lr
+            self.model.parameters(), lr=ProtoNetSearcher.lr
         )
         self.scheduler = torch.optim.lr_scheduler.StepLR(
             self.optim, step_size=1000, gamma=0.5
