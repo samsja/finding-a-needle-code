@@ -165,6 +165,44 @@ class BasicRelationModule(nn.Module):
 
         return x
 
+class VeryBasicRelationModule(nn.Module):
+    def __init__(
+        self, input_size: int, hidden_size: int = 8, linear_size: int = None, lazy=False
+    ):
+        """
+        Basic BasicRelationModule for the RelationNet
+        # Arguments
+            input_size: int. feature space dimension
+            hidden_size: int. size of the hidden layer
+            linear_size: int. size of the linear layer input
+            Lazy : bool. if True will iniliate a Lazy Layer for the first linear
+        """
+
+        super().__init__()
+
+        if lazy:
+            self.linear1 = nn.LazyLinear(hidden_size)
+
+        else:
+            if linear_size == None:
+                linear_size = input_size * 2
+
+            self.linear1 = nn.Linear(linear_size, hidden_size)
+
+        self.linear2 = nn.Linear(hidden_size, 1)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        forward method
+        """
+        x = x.view(x.size(0), -1)
+        x = self.linear1(x)
+        x = F.relu(x)
+        x = self.linear2(x)
+        x = torch.sigmoid(x)
+
+        return x
+
 
 class RelationNet(torch.nn.Module):
     """
@@ -237,7 +275,6 @@ class RelationNet(torch.nn.Module):
         """
 
         # expand without copy memory for the concatenation and cat -> [ep,k,k,q,2*x,y,y]
-
         features_supports = features_supports.view(
             episodes, classes_per_ep, 1, 1, *features_supports.shape[-3:]
         )
@@ -269,6 +306,7 @@ class RelationNet(torch.nn.Module):
         sample_per_class: int,
         classes_per_ep: int,
         queries: int,
+        features_shape = None,
     ) -> torch.Tensor:
         """
         forward pass for the relation net
@@ -281,7 +319,7 @@ class RelationNet(torch.nn.Module):
         features = self.embedding(inputs)
 
         return self.forward_on_features(
-            features, episodes, sample_per_class, classes_per_ep, queries
+            features, episodes, sample_per_class, classes_per_ep, queries, features_shape
         )
 
     def forward_on_features(
@@ -291,10 +329,14 @@ class RelationNet(torch.nn.Module):
         sample_per_class: int,
         classes_per_ep: int,
         queries: int,
+        features_shape = None,
     ) -> torch.Tensor:
 
+        if features_shape is None:
+            features_shape = features.shape[-3:]
+
         features = features.view(
-            episodes * classes_per_ep, sample_per_class + queries, *features.shape[-3:]
+            episodes * classes_per_ep, sample_per_class + queries, *features_shape
         )
         features_supports, features_queries = (
             features[:, :sample_per_class],
@@ -375,7 +417,7 @@ class RelationNetAdaptater(ModuleAdaptater):
         self,
         test_taskloader: torch.utils.data.DataLoader,
         support_set: torch.Tensor,
-        rare_class_index: int, 
+        rare_class_index: int,
         tqdm_silent = False,
     ):
 
@@ -404,7 +446,7 @@ class RelationNetAdaptater(ModuleAdaptater):
 
         return index[argsort], relations
 
-    
+
 
     def get_mismatch_inputs(
         self, inputs

@@ -1,6 +1,9 @@
 
 
 
+from src.few_shot_learning.utils_train import TrainerFewShot
+from src.datasource import FewShotParam
+from src.few_shot_learning.relation_net import RelationNet, RelationNetAdaptater, VeryBasicRelationModule
 import torch
 import torch.nn as nn
 
@@ -67,6 +70,79 @@ def train(
         acc = (outputs == labels).float().mean()
 
     return model, acc
+
+from src.few_shot_learning.datasets import FewShotDataSet
+from src.few_shot_learning.sampler import FewShotSampler2
+class BlobFSDataSet(FewShotDataSet):
+    def __init__(self,data,labels):
+        super().__init__()
+
+        self.data = data
+        self.labels = labels
+        self._classes = labels.unique()
+
+    def __getitem__(self, idx):
+        return self.data[idx],self.labels[idx]
+
+    def get_index_in_class(self, class_idx: int):
+        """
+        Method to get the indexes of the elements in the same class as class_idx
+
+        # Args:
+            class_idx : int. The index of the desider class
+
+        """
+        return torch.where(self.labels==class_idx)[0]
+
+    def get_index_in_class_vect(self, class_idx):
+
+        return [self.get_index_in_class(c.item()) for c in class_idx]
+
+def train_few_shot(
+    model,data, labels, device, lr=1e-2, epochs=1000, balanced_loss=False, callback=None
+):
+    few_shot_dataset = BlobFSDataSet(data,labels)
+    few_shot_param = FewShotParam(1,1,1,len(labels.unique()),10)
+
+
+    sampler = FewShotSampler2(few_shot_dataset,*few_shot_param)
+
+    few_shot_taskloader = torch.utils.data.DataLoader(
+        few_shot_dataset, batch_sampler=sampler, num_workers=0
+    )
+
+    model_adapter = RelationNetAdaptater(model, few_shot_param.episodes,
+        few_shot_param.sample_per_class,
+        few_shot_param.classes_per_ep,
+        few_shot_param.queries, device )
+
+
+    train_model_adapter = RelationNetAdaptater(
+        model,
+        few_shot_param.episodes,
+        few_shot_param.sample_per_class,
+        few_shot_param.classes_per_ep,
+        few_shot_param.queries,
+        device,
+    )
+
+    device = device
+
+    optim = torch.optim.Adam(
+        model.parameters(), lr=lr
+    )
+    scheduler = torch.optim.lr_scheduler.StepLR(
+        optim, step_size=1000, gamma=0.5
+    )
+
+    trainer = TrainerFewShot(
+        train_model_adapter, device, checkpoint=False
+    )
+
+    trainer.fit(epochs,1,optim,scheduler,few_shot_taskloader,few_shot_taskloader,silent=False)
+
+    return model
+
 
 
 def train_custom_loss(model, data, labels, lr=1e-2, epochs=100, callback=None):
@@ -139,7 +215,7 @@ def vizu(model, X, y, device, figsize=(17, 7)):
     plt.ylim(yy.min(), yy.max())
 
 
-def vizu_proba(model, X, y, device, figsize=(17, 7)):
+def vizu_proba(model, X, y, device, selection_data, selection_labels, figsize=(17, 7)):
     h = 0.05
     X = X.to("cpu")
     y = y.to("cpu")
@@ -149,7 +225,9 @@ def vizu_proba(model, X, y, device, figsize=(17, 7)):
     Xmesh = np.c_[xx.ravel(), yy.ravel()]
 
     with torch.no_grad():
-        Z = model(torch.from_numpy(Xmesh).float().to(device)).softmax(dim=1)[:, 0]
+        Z = model(torch.from_numpy(Xmesh).float().to(device))
+    if Z.shape[1] > 1:
+        Z = Z.softmax(dim=1)[:, 0]
 
     Z = Z.to("cpu").numpy().reshape(xx.shape)
 
@@ -157,6 +235,8 @@ def vizu_proba(model, X, y, device, figsize=(17, 7)):
     cs = plt.contourf(xx, yy, Z, cmap=plt.cm.get_cmap("magma_r"), alpha=0.8)
     plt.colorbar(cs)
     plt.scatter(X[:, 0], X[:, 1], c=y, s=40, cmap=plt.cm.magma)
+    plt.scatter(selection_data[:, 0], selection_data[:, 1], c=selection_labels, s=10,
+                marker="x", cmap=plt.cm.magma)
 
     plt.xlim(xx.min(), xx.max())
     plt.ylim(yy.min(), yy.max())
@@ -219,59 +299,114 @@ class SymbolicNN:
 
         return sum([acc(y) for y in Y])
 
+class ConvUnsqueezer(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+    def forward(self, x):
+        return x.view(1, len(x), 2, 1, 1)
+
+
+def get_protonet_model(x, y, rare_class_index=0):
+    rare_x = x[y == rare_class_index]
+    prototype = rare_x.mean(dim=0)
+
+    class ProtonetModel(torch.nn.Module):
+        def __init__(self, prototype):
+            super().__init__()
+            self.prototype = prototype
+
+        def forward(self, x):
+            return -torch.cdist(x, self.prototype.unsqueeze(0))
+
+    return ProtonetModel(prototype)
+
+
+def get_relationnet_model(x, y, device, rare_class_index=0):
+    relation_net = RelationNet(device=device, out_channels=1, in_channels=2, embedding_module=ConvUnsqueezer(),
+                               relation_module=VeryBasicRelationModule(input_size=2))
+
+    relation_net = train_few_shot(relation_net,x,y,device)
+
+    rare_x = x[y == rare_class_index]
+    prototype = rare_x.mean(dim=0)
+    class SearchingRelationNet(torch.nn.Module):
+        def __init__(self, relation_net, prototype):
+            super().__init__()
+            self.relation_net = relation_net
+            self.prototype = prototype
+
+        def forward(self, x):
+            inp = torch.cat((self.prototype.unsqueeze(0), x))
+            # breakpoint()
+            result = self.relation_net(inp, 1, 1, 1, len(x))
+            return result
+
+    return SearchingRelationNet(relation_net, prototype)
 
 
 def get_main(device,holder):
 
     @interact(
-        n_samples=widgets.IntSlider(
-            min=100, max=2000, step=100, value=100, continuous_update=False
+        n_train_samples=widgets.IntSlider(
+            min=100, max=2000, step=100, value=500, continuous_update=False
         ),
-        centers=widgets.IntSlider(min=2, max=10, step=1, value=2, continuous_update=False),
+        n_selection_samples=widgets.IntSlider(
+            min=0, max=2000, step=100, value=100, continuous_update=False
+        ),
+        centers=widgets.IntSlider(min=2, max=10, step=1, value=3, continuous_update=False),
         cluster_std=widgets.FloatSlider(
             min=0, max=1, step=0.1, value=0.5, continuous_update=False
         ),
         ratio=widgets.FloatSlider(
-            min=0, max=1, step=0.01, value=1, continuous_update=False
+            min=0, max=1, step=0.01, value=.02, continuous_update=False
         ),
         lr=widgets.FloatText(value=1e-2, description="lr:", disabled=False),
         epochs=widgets.IntText(value=100, description="epochs:", disabled=False),
         balanced_loss=widgets.Checkbox(
             value=False, description="Balanced_loss", disabled=False, indent=False
         ),
-        vizu_proba_flag=widgets.Checkbox(
-            value=False, description="Vizu proba", disabled=False, indent=False
+        dist_common=widgets.FloatSlider(
+            min=0, max=10, step=0.1, value=1, continuous_update=False
         ),
-        dist_center=widgets.FloatSlider(
-            min=0, max=1, step=0.1, value=0, continuous_update=False
+        dist_rare=widgets.FloatSlider(
+            min=0, max=10, step=0.1, value=1, continuous_update=False
         ),
     )
     def main(
-        n_samples=1000,
+        n_train_samples=1000,
+        n_selection_samples=0,
         centers=2,
-        dist_center =0,
+        dist_common=1,
+        dist_rare=1,
         cluster_std=0.5,
         ratio=1,
         lr=1e-2,
         epochs=100,
-        balanced_loss=False,
-        vizu_proba_flag=False,
+        balanced_loss=False
     ):
-        if dist_center > 0 :
-           centers =  [[0,0],[-4*dist_center,8],[4*dist_center,8]]
+        centers =  [[0,0],[-dist_common, dist_rare],[dist_common, dist_rare]]
 
         rand_state = np.random.RandomState(2)
 
-        holder.data, holder.labels = make_blob_torch(n_samples,centers,cluster_std,rand_state,ratio,device)
+        holder.data, holder.labels = make_blob_torch(n_train_samples,centers,cluster_std,rand_state,ratio,device)
 
         holder.model, acc = train(
             holder.data, holder.labels, device, lr, epochs, balanced_loss
         )
 
-        vizu_f = vizu_proba if vizu_proba_flag else vizu
-        
-        vizu_f(holder.model, holder.data, holder.labels, device)
+        selection_data, selection_labels = make_blob_torch(n_selection_samples,centers,cluster_std,rand_state,ratio,device)
+        vizu_proba(holder.model, holder.data, holder.labels, device, selection_data, selection_labels)
+        plt.title("StandardNet selection function")
+        plt.show()
 
+        protonet_model = get_protonet_model(holder.data, holder.labels)
+        vizu_proba(protonet_model, holder.data, holder.labels, device, selection_data, selection_labels)
+        plt.title("ProtoNet selection function")
+        plt.show()
+
+        relationnet_model = get_relationnet_model(holder.data, holder.labels, device)
+        vizu_proba(relationnet_model, holder.data, holder.labels, device, selection_data, selection_labels)
+        plt.title("RelationNet selection function")
         plt.show()
 
         boxplot_proba_few_shot(holder.model, holder.data, holder.labels, device)
