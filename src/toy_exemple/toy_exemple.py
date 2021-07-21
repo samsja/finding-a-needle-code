@@ -79,7 +79,7 @@ class BlobFSDataSet(FewShotDataSet):
 
         self.data = data
         self.labels = labels
-        self._classes = labels.unique()
+        self._classes = labels.unique().to("cpu")
 
     def __getitem__(self, idx):
         return self.data[idx],self.labels[idx]
@@ -101,7 +101,7 @@ class BlobFSDataSet(FewShotDataSet):
 def train_few_shot(
     model,data, labels, device, lr=1e-2, epochs=1000, balanced_loss=False, callback=None
 ):
-    few_shot_dataset = BlobFSDataSet(data,labels)
+    few_shot_dataset = BlobFSDataSet(data.to(device),labels.to(device))
     few_shot_param = FewShotParam(1,1,1,len(labels.unique()),10)
 
 
@@ -235,7 +235,7 @@ def vizu_proba(model, X, y, device, selection_data, selection_labels, figsize=(1
     cs = plt.contourf(xx, yy, Z, cmap=plt.cm.get_cmap("magma_r"), alpha=0.8)
     plt.colorbar(cs)
     plt.scatter(X[:, 0], X[:, 1], c=y, s=40, cmap=plt.cm.magma)
-    plt.scatter(selection_data[:, 0], selection_data[:, 1], c=selection_labels, s=10,
+    plt.scatter(selection_data.to("cpu")[:, 0], selection_data.to("cpu")[:, 1], c=selection_labels.to("cpu"), s=10,
                 marker="x", cmap=plt.cm.magma)
 
     plt.xlim(xx.min(), xx.max())
@@ -251,53 +251,6 @@ def boxplot_proba_few_shot(model, X, y, device):
     plt.title("Probability that point belongs to the class with few shot")
 
 
-import sympy as sp
-
-
-class SymbolicNN:
-    def __init__(self, N):
-
-        self.N = N
-
-        self.w = []
-        self.b = []
-
-        for i in range(self.N):
-            self.w.append(sp.Symbol(f"w_{i}"))
-            self.b.append(sp.Symbol(f"b_{i}"))
-
-    def a(self, x, i, mu):
-        return self.w[i] * x[mu] + self.b[i]
-
-    def o(self, x, i, mu):
-        return sp.exp(self.a(x, i, mu)) / (
-            sum(sp.exp(self.a(x, j, mu)) for j in range(self.N))
-        )
-
-    def loss(self, x):
-        return -sum([sp.log(self.o(x, mu, mu)) for mu in range(self.N)])
-
-    def loss_w(self, x, weight):
-        return -sum([weight[mu] * sp.log(self.o(x, mu, mu)) for mu in range(self.N)])
-
-    def regul(self):
-        return sp.sqrt(sum([w * w for w in self.w]))
-
-    def loss_regul(self, x):
-        return self.loss(x) + self.regul()
-
-    def accuracy(self, x, y, w, b):
-
-        if self.N != 2:
-            raise NotImplementedError("N should be equal to 2 ")
-
-        subs = {model.w[i]: w[i] for i in range(len(model.w))}
-        subs.update({model.b[i]: b[i] for i in range(len(model.b))})
-
-        def acc(mu):
-            return 1 if (self.o(x, mu, mu) > self.o(x, 1 - mu, mu)).subs(subs) else 0
-
-        return sum([acc(y) for y in Y])
 
 class ConvUnsqueezer(torch.nn.Module):
     def __init__(self):
@@ -323,7 +276,7 @@ def get_protonet_model(x, y, rare_class_index=0):
 
 def get_relationnet_model(x, y, device, rare_class_index=0):
     relation_net = RelationNet(device=device, out_channels=1, in_channels=2, embedding_module=ConvUnsqueezer(),
-                               relation_module=VeryBasicRelationModule(input_size=2))
+                               relation_module=VeryBasicRelationModule(input_size=2)).to(device)
 
     relation_net = train_few_shot(relation_net,x,y,device)
 
@@ -413,3 +366,55 @@ def get_main(device,holder):
         plt.show()
 
     return main
+
+
+### sympy
+
+
+import sympy as sp
+
+
+class SymbolicNN:
+    def __init__(self, N):
+
+        self.N = N
+
+        self.w = []
+        self.b = []
+
+        for i in range(self.N):
+            self.w.append(sp.Symbol(f"w_{i}"))
+            self.b.append(sp.Symbol(f"b_{i}"))
+
+    def a(self, x, i, mu):
+        return self.w[i] * x[mu] + self.b[i]
+
+    def o(self, x, i, mu):
+        return sp.exp(self.a(x, i, mu)) / (
+            sum(sp.exp(self.a(x, j, mu)) for j in range(self.N))
+        )
+
+    def loss(self, x):
+        return -sum([sp.log(self.o(x, mu, mu)) for mu in range(self.N)])
+
+    def loss_w(self, x, weight):
+        return -sum([weight[mu] * sp.log(self.o(x, mu, mu)) for mu in range(self.N)])
+
+    def regul(self):
+        return sp.sqrt(sum([w * w for w in self.w]))
+
+    def loss_regul(self, x):
+        return self.loss(x) + self.regul()
+
+    def accuracy(self, x, y, w, b):
+
+        if self.N != 2:
+            raise NotImplementedError("N should be equal to 2 ")
+
+        subs = {model.w[i]: w[i] for i in range(len(model.w))}
+        subs.update({model.b[i]: b[i] for i in range(len(model.b))})
+
+        def acc(mu):
+            return 1 if (self.o(x, mu, mu) > self.o(x, 1 - mu, mu)).subs(subs) else 0
+
+        return sum([acc(y) for y in Y])
