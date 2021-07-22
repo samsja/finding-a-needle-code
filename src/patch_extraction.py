@@ -3,120 +3,73 @@ import numpy as np
 from PIL import Image
 import os
 import sys
+import click
+from tqdm.auto import tqdm
 
-import argparse
-from tqdm.autonotebook import tqdm
+@click.command()
+@click.option("--img_path", required=True, help="the path to the image folder")
+@click.option("--annot_path", required=True, help="the path to the annotation folder")
+@click.option("--output_path", required=True, help="the path to the output folder")
+def main(img_path, annot_path, output_path):
 
-parser = argparse.ArgumentParser()
-parser.add_argument("--data_path", default="data/traffic-signs", type=str)
-parser.add_argument("--output_path", default="data/traffic-signs/patched", type=str)
+    metadata_path = annot_path
 
-args = parser.parse_args()
-
-
-data_path = args.data_path
-output_path = args.output_path
-
-sub_path = "converted"
-img_path = f"{data_path}/{sub_path}/images/"
-annot_path = f"{data_path}/{sub_path}/annotations/"
-metadata_path = f"{data_path}/original/metadata/metadata"
-
-output_path_images = f"{output_path}/images"
-output_path_annotations = f"{output_path}/annotations"
+    output_path_images = f"{output_path}/images"
+    output_path_annotations = f"{output_path}/annotations"
 
 
-for json_filename in tqdm(os.listdir(annot_path)):
+    list_file =  os.listdir(annot_path) 
 
-    if "json" not in json_filename:
-        continue
+    for json_filename in tqdm(list_file):
 
+        if "json" not in json_filename:
+            continue
 
-    file_id = json_filename[:-5]
+        file_id = json_filename[:-5]
+        image_filename = file_id + ".jpg"
 
-    with open(annot_path + json_filename) as json_file:
-        try:
+        with open(f"{annot_path}/{json_filename}") as json_file:
             data = json.load(json_file)
-        except Exception as e:
-            print(json_filename)
-            print(e)
-            pass
 
-    image_filename = data["Scenes"]["1"]["Sensors"]["FC"]["Filename"]
+        try:
+            img = np.array(Image.open(f"{img_path}/{image_filename}"))
+        except:
+            print(f"{image_filename} can't be loaded as an image", file=sys.stderr)
+            continue
 
-    try:
-        img = np.array(Image.open(img_path + image_filename))
-    except:
-        print(f"{image_filename} can't be loaded as an image", file=sys.stderr)
-        continue
+        signs_ = data["objects"]
 
-    try:
-        with open(f"{metadata_path}/{file_id}.json") as jsom_metadata_file:
-            metadata = json.load(jsom_metadata_file)
-    except FileNotFoundError as e:
-        print(e)
-        pass
 
-    annotations = metadata
+        for sign in signs_:
+            if "NotListed" not in sign["label"]:
 
-    signs_ = data["Scenes"]["1"]["TrafficSigns"]
+                class_ = sign["label"]
 
-    for o in signs_:
-        if "NotListed" not in signs_[o]["2dMarking"]["FC"]["SignProperties"]["Type"]:
+                patch_name = sign["key"]
 
-            class_ = signs_[o]["2dMarking"]["FC"]["SignProperties"]["Type"]
+                x1 = int(sign["bbox"]["xmin"])
+                x2 = int(sign["bbox"]["xmax"])
 
-            x1 = int(signs_[o]["2dMarking"]["FC"]["Top"]["X"])
-            x2 = int(signs_[o]["2dMarking"]["FC"]["Bottom"]["X"])
-         
-            assert(x1<x2)
+                y1 = int(sign["bbox"]["ymin"])
+                y2 = int(sign["bbox"]["ymax"])
 
-            x_diff = (x2 - x1)/2
-            x1 -= x_diff/2
-            x1 = int(max(0,x1))
-            
-            x2 += x_diff/2
-            x2 = int(min(x2,img.shape[1] -1))
+                patch = img[y1:y2, x1:x2]
 
-            assert x1 < x2
+                if not os.path.isdir(f"{output_path_images}/{class_}"):
+                    os.makedirs(f"{output_path_images}/{class_}")
 
-            x_diff = (x2 - x1) / 2
-            x1 -= x_diff / 2
-            x1 = int(max(0, x1))
+                Image.fromarray(patch).save(
+                    f"{output_path_images}/{class_}/{patch_name}.jpg"
+                )
 
-            x2 += x_diff / 2
-            x2 = int(min(x2, img.shape[1] - 1))
+                if not os.path.isdir(f"{output_path_annotations}/{class_}"):
+                    os.makedirs(f"{output_path_annotations}/{class_}")
 
-            assert x1 < x2
+                with open(
+                    f"{output_path_annotations}/{class_}/{patch_name}.json", "w"
+                ) as outfile:
+                    json.dump(sign, outfile)
 
-            x_diff = (x2 - x1) / 2
-            x1 -= x_diff / 2
-            x1 = int(max(0, x1))
 
-            x2 += x_diff / 2
-            x2 = int(min(x2, img.shape[1] - 1))
-
-            y1 = int(signs_[o]["2dMarking"]["FC"]["Top"]["Y"])
-            y2 = int(signs_[o]["2dMarking"]["FC"]["Bottom"]["Y"])
-
-            assert(y1<y2)
-
-            y_diff = (y2 - y1)/2
-            y1 -= y_diff/2
-            y1 = int(max(0,y1))
-            
-            y2 += y_diff/2
-            y2 = int(min(y2,img.shape[0] -1 ))
-
-            patch = img[y1:y2, x1:x2]
-
-            if not os.path.isdir(f"{output_path_images}/{class_}"):
-                os.makedirs(f"{output_path_images}/{class_}")   
-
-            Image.fromarray(patch).save(f"{output_path_images}/{class_}/{o}.jpg")
-
-            if not os.path.isdir(f"{output_path_annotations}/{class_}"):
-                os.makedirs(f"{output_path_annotations}/{class_}")
-
-            with open(f"{output_path_annotations}/{class_}/{o}.json", "w") as outfile:
-                json.dump(annotations, outfile)
+if __name__ == "__main__":
+    main()
