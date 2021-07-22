@@ -306,7 +306,6 @@ class RelationNet(torch.nn.Module):
         sample_per_class: int,
         classes_per_ep: int,
         queries: int,
-        features_shape = None,
     ) -> torch.Tensor:
         """
         forward pass for the relation net
@@ -319,7 +318,7 @@ class RelationNet(torch.nn.Module):
         features = self.embedding(inputs)
 
         return self.forward_on_features(
-            features, episodes, sample_per_class, classes_per_ep, queries, features_shape
+            features, episodes, sample_per_class, classes_per_ep, queries,
         )
 
     def forward_on_features(
@@ -329,11 +328,9 @@ class RelationNet(torch.nn.Module):
         sample_per_class: int,
         classes_per_ep: int,
         queries: int,
-        features_shape = None,
     ) -> torch.Tensor:
 
-        if features_shape is None:
-            features_shape = features.shape[-3:]
+        features_shape = features.shape[-3:]
 
         features = features.view(
             episodes * classes_per_ep, sample_per_class + queries, *features_shape
