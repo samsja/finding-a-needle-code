@@ -13,17 +13,17 @@ def img_from_tensor(inp):
     return inp
 
 
-def imshow(inp, title=None):
+def imshow(inp, title=None,aspect=None):
     """Imshow for Tensor."""
     inp = img_from_tensor(inp)
-    plt.imshow(inp)
+    plt.imshow(inp,aspect=aspect)
     plt.axis("off")
     if title is not None:
         plt.title(title)
 
 
 def plot_list(
-    images, title=None, ncols=4, figsize=(8, 8), img_from_tensor=img_from_tensor
+    images, title=None, ncols=4, figsize=(8, 8), img_from_tensor=img_from_tensor,aspect=None
 ):
 
     if ncols > len(images):
@@ -37,10 +37,14 @@ def plot_list(
     rows = quotient + 1 if rest > 0 else quotient
     for i in range(1, len(images) + 1):
         fig.add_subplot(rows, columns, i)
-        imshow(images[i - 1], title=title[i - 1] if title is not None else None)
+        imshow(images[i - 1], title=title[i - 1] if title is not None else None,aspect = aspect)
         plt.axis("off")
 
-        fig.subplots_adjust(wspace=0, hspace=0)
+        if title is None:
+            fig.subplots_adjust(wspace=0, hspace=0)
+        else:
+            fig.subplots_adjust(wspace=0.1)
+    
     plt.show()
 
 
@@ -49,7 +53,7 @@ def plot_search(
     top,
     relation,
     test_dataset,
-    figsize=(7, 7),
+    figsize=(9, 15),
     img_from_tensor=img_from_tensor,
     ncols=4,
 ):
@@ -62,6 +66,7 @@ def plot_search(
         figsize=figsize,
         img_from_tensor=img_from_tensor,
         ncols=ncols,
+        aspect="auto"
     )
 
 
@@ -79,7 +84,7 @@ def plot_image_to_find(class_to_search_for, test_dataset, relation, top, max_len
 
     target_images = torch.stack([test_dataset[i]["img"] for i in index_to_find])
 
-    plot_list(target_images, title=title, ncols=6, figsize=(15, 15))
+    plot_list(target_images, title=title, ncols=6,figsize=(9,15),aspect="auto")
 
 
 def plot_score_one_class(score, class_, scores_df):

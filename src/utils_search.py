@@ -316,7 +316,7 @@ def exp_searching(
                     top,
                     relation,
                     test_dataset,
-                    figsize=(15, 15),
+                    figsize=(9, 15),
                     ncols=6,
                 )
 
