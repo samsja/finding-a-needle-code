@@ -137,8 +137,12 @@ def plot_all_model_mean(all_scores, scores_df,figsize=(10,15)):
         for model in scores_df["model"].unique():
             df_model = df_mean[df_mean["model"] == model]
             x =  range(len(list(df_model[score])))
-            y =  df_model[score]
+            
+            if score == "train_size":
+                y = [1] +  df_model[score].tolist()[:-1]
+            else:
            
+                y =  df_model[score]
 
             
             plt.plot(
@@ -155,7 +159,7 @@ def plot_all_model_mean(all_scores, scores_df,figsize=(10,15)):
             plt.fill_between(x, (y-ci),(y+ci),alpha=0.1)
 
 
-            plt.grid(color="grey", linewidth=1, axis="both", alpha=0.5)
+            plt.grid(b=True,color="grey", linewidth=1, axis="both", alpha=0.5)
 
             plt.ylabel(f"{score}")
 
