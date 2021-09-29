@@ -84,7 +84,7 @@ def plot_image_to_find(class_to_search_for, test_dataset, relation, top, max_len
 
     target_images = torch.stack([test_dataset[i]["img"] for i in index_to_find])
 
-    plot_list(target_images, title=title, ncols=6,figsize=(9,15),aspect="auto")
+    plot_list(target_images, title=title, ncols=6,figsize=(9,15))
 
 
 def plot_score_one_class(score, class_, scores_df):
