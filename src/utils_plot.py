@@ -23,7 +23,7 @@ def imshow(inp, title=None,aspect=None):
 
 
 def plot_list(
-    images, title=None, ncols=4, figsize=(8, 8), img_from_tensor=img_from_tensor,aspect=None
+    images, title=None, ncols=4, figsize=(8, 8), img_from_tensor=img_from_tensor,aspect=None,space = None,
 ):
 
     if ncols > len(images):
@@ -40,10 +40,10 @@ def plot_list(
         imshow(images[i - 1], title=title[i - 1] if title is not None else None,aspect = aspect)
         plt.axis("off")
 
-        if title is None:
-            fig.subplots_adjust(wspace=0, hspace=0)
-        else:
-            fig.subplots_adjust(wspace=0.1)
+        if space is None:
+            space = (0.1,0.1) if title is None else (0.1,0)
+        
+        fig.subplots_adjust(wspace=space[0], hspace=space[1])
     
     plt.show()
 

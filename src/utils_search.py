@@ -41,9 +41,7 @@ import copy
 def move_found_images(datapoint_to_add, train_dataset, test_dataset):
     len_train, len_test = len(train_dataset), len(test_dataset)
 
-    #  tr_d = copy.deepcopy(train_dataset)
-    #  test_d = copy.deepcopy(test_dataset)
-    #
+
     for class_ in datapoint_to_add.keys():
         for datapoint in datapoint_to_add[class_]:
             train_dataset.add_datapoint(
@@ -61,12 +59,7 @@ def move_found_images(datapoint_to_add, train_dataset, test_dataset):
     test_dataset.update_classes_indexes()
 
 
-#
-#  try :
-#      assert(len(train_dataset) + len(test_dataset)  == len_train + len_test)
-#  except AssertionError:
-#      breakpoint()
-#
+
 def train_and_search(
     mask,
     epochs,
