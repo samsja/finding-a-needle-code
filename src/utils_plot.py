@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 import matplotlib.pyplot as plt
-
+import seaborn as sns
 
 def img_from_tensor(inp):
     inp = inp.to("cpu").numpy().transpose((1, 2, 0))
@@ -119,7 +119,14 @@ def plot_score_model(score, model, scores_df):
 
 
 
-def plot_all_model_mean(all_scores, scores_df,figsize=(10,15)):
+def plot_all_model_mean(all_scores, scores_df,figsize=(10,15),rename_model=None,cmap="Spectral"):
+    
+    rename_model = {} if rename_model is None else rename_model
+    
+    for  model in scores_df["model"].unique():
+        if model not in rename_model.keys():
+            rename_model[model] = model
+
 
     df = scores_df.groupby(["iteration","run_id","model"],as_index=False).mean()
     df_conf = df.groupby(["model","iteration"],as_index=False).apply(lambda x :  int_conf_df(x,conf=0.95))
@@ -129,46 +136,50 @@ def plot_all_model_mean(all_scores, scores_df,figsize=(10,15)):
         
 
     
-    for i,score in enumerate(all_scores):
-       
-
-        fig.add_subplot(len(all_scores)//2 + 1, 2, i+1)
-        
-        for model in scores_df["model"].unique():
-            df_model = df_mean[df_mean["model"] == model]
-            x =  range(len(list(df_model[score])))
-            
-            if score == "train_size":
-                y = [1] +  df_model[score].tolist()[:-1]
-            else:
+    with sns.color_palette(cmap, n_colors=len(all_scores)):
+        for i,score in enumerate(all_scores):
            
-                y =  df_model[score]
-
             
-            plt.plot(
-                x,
-                y,
-                label=model,
-                marker=".",
-                linestyle=":",
-                linewidth=2,
-            )
+            if len(all_scores) == 2:
+                fig.add_subplot(2 , 1, i+1)
+            else:
+                fig.add_subplot(len(all_scores)//2 + 1, 2, i+1)
+            
+            for model in scores_df["model"].unique():
+                df_model = df_mean[df_mean["model"] == model]
+                x =  range(len(list(df_model[score])))
+                
+                if score == "train_size":
+                    y = [1] +  df_model[score].tolist()[:-1]
+                else:
+               
+                    y =  df_model[score]
 
-            df_model_conf = df_conf[df_conf["model"] == model]
-            ci = df_model_conf[score]
-            plt.fill_between(x, (y-ci),(y+ci),alpha=0.1)
+                plt.plot(
+                    x,
+                    y,
+                    label=rename_model[model],
+                    marker=".",
+                    linestyle=":",
+                    linewidth=2,
+                )
+
+                df_model_conf = df_conf[df_conf["model"] == model]
+                ci = df_model_conf[score]
+                plt.fill_between(x, (y-ci),(y+ci),alpha=0.1)
 
 
-            plt.grid(b=True,color="grey", linewidth=1, axis="both", alpha=0.5)
+                plt.grid(b=True,color="grey", linewidth=1, axis="both", alpha=0.5)
 
-            plt.ylabel(f"{score}")
+                plt.ylabel(f"{score}")
 
-    plt.legend(
-        loc="upper center",
-        bbox_to_anchor=(-0.1, -0.15),
-        shadow=False,
-        ncol=4,
-    )
+        bbox_to_anchor = (-0.1, -0.15) if len(all_scores) != 2 else (0.5,-0.15)
+        plt.legend(
+            loc="upper center",
+            bbox_to_anchor=bbox_to_anchor,
+            shadow=False,
+            ncol=4,
+        )
 
 import pandas as pd
 import numpy as np
