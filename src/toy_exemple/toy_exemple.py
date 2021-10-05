@@ -229,12 +229,12 @@ def vizu(model, X, y, device, figsize=(17, 7)):
     plt.ylim(yy.min(), yy.max())
 
 
-def vizu_proba(model, X, y, device, selection_data, selection_labels, figsize=(17, 7)):
+def vizu_proba(model, X, y, device, selection_data, selection_labels, figsize=(17, 7),space=(-1,1,-1,1)):
     h = 0.05
     X = X.to("cpu")
     y = y.to("cpu")
-    x_min, x_max = X[:, 0].min() - 1, X[:, 0].max() + 1
-    y_min, y_max = X[:, 1].min() - 1, X[:, 1].max() + 1
+    x_min, x_max = X[:, 0].min() + space[0], X[:, 0].max() + space[1]
+    y_min, y_max = X[:, 1].min() + space[2], X[:, 1].max() + space[3]
     xx, yy = np.meshgrid(np.arange(x_min, x_max, h), np.arange(y_min, y_max, h))
     Xmesh = np.c_[xx.ravel(), yy.ravel()]
 
@@ -246,9 +246,11 @@ def vizu_proba(model, X, y, device, selection_data, selection_labels, figsize=(1
     Z = Z.to("cpu").numpy().reshape(xx.shape)
 
     fig = plt.figure(figsize=figsize)
-    cs = plt.contourf(xx, yy, Z, cmap=plt.cm.get_cmap("magma_r"), alpha=0.8)
+    cs = plt.contourf(xx, yy, Z, cmap=plt.cm.get_cmap("Greys"), alpha=0.8)
     plt.colorbar(cs)
-    plt.scatter(X[:, 0], X[:, 1], c=y, s=40, cmap=plt.cm.magma)
+
+    colormap = np.array(['g', 'red', 'b'])
+    plt.scatter(X[:, 0], X[:, 1], c=colormap[y], s=40)
 
     if selection_data is not None:
         plt.scatter(
@@ -359,6 +361,9 @@ def get_main(device, holder):
         relation_net=widgets.Checkbox(
             value=False, description="RelationNet", disabled=False, indent=False
         ),
+        zoom=widgets.Checkbox(
+            value=True, description="Zoom", disabled=False, indent=False
+        ),
     )
     def main(
         n_train_samples=1000,
@@ -373,7 +378,12 @@ def get_main(device, holder):
         balanced_loss=False,
         proto_net=False,
         relation_net=False,
+        zoom = True,
     ):
+
+
+        space = (-0.5,0.5,-1,1) if zoom else  (-10,10,-10,2)
+        
         centers = [[0, 0], [-dist_common, dist_rare], [dist_common, dist_rare]]
 
         rand_state = np.random.RandomState(4) #2
@@ -396,10 +406,12 @@ def get_main(device, holder):
             device,
             selection_data,
             selection_labels,
+            space = space,
         )
 
         plt.title("StandardNet selection function")
         plt.show()
+
 
         if proto_net:
             protonet_model = get_protonet_model(holder.data, holder.labels)
