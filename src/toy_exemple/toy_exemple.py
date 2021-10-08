@@ -15,7 +15,7 @@ from tqdm.auto import tqdm
 
 import ipywidgets as widgets
 from ipywidgets import fixed, interact, interact_manual, interactive
-
+import seaborn as sns
 
 def make_blob_torch(n_samples, centers, cluster_std, random_state, ratio, device):
     X, y = make_blobs_few_shot(
@@ -113,7 +113,7 @@ def train_few_shot(
     callback=None,
 ):
     few_shot_dataset = BlobFSDataSet(data.to(device), labels.to(device))
-    few_shot_param = FewShotParam(1, 1, 1, len(labels.unique()), 10)
+    few_shot_param = FewShotPa120m(1, 1, 1, len(labels.unique()), 10)
 
     sampler = FewShotSampler2(few_shot_dataset, *few_shot_param)
 
@@ -229,7 +229,7 @@ def vizu(model, X, y, device, figsize=(17, 7)):
     plt.ylim(yy.min(), yy.max())
 
 
-def vizu_proba(model, X, y, device, selection_data, selection_labels, figsize=(17, 7),space=(-1,1,-1,1)):
+def vizu_proba(model, X, y, device, selection_data, selection_labels, figsize=(5, 5),space=(-1,1,-1,1)):
     h = 0.05
     X = X.to("cpu")
     y = y.to("cpu")
@@ -249,17 +249,20 @@ def vizu_proba(model, X, y, device, selection_data, selection_labels, figsize=(1
     cs = plt.contourf(xx, yy, Z, cmap=plt.cm.get_cmap("Greys"), alpha=0.8)
     plt.colorbar(cs)
 
-    colormap = np.array(['g', 'red', 'b'])
-    plt.scatter(X[:, 0], X[:, 1], c=colormap[y], s=40)
+    mask = np.where(y!=0)
+    mask_rare = np.where(y==0)
+    colormap = np.array(sns.color_palette("hls",8).as_hex())
+
+    plt.scatter(X[mask, 0], X[mask, 1], c=colormap[y[mask]], s=10)
+    plt.scatter(X[mask_rare, 0], X[mask_rare, 1], c=colormap[y[mask_rare]], s=100,marker="*")
 
     if selection_data is not None:
         plt.scatter(
             selection_data.to("cpu")[:, 0],
             selection_data.to("cpu")[:, 1],
-            c=selection_labels.to("cpu"),
-            s=10,
+            s=8,
             marker="x",
-            cmap=plt.cm.magma,
+            c=colormap[selection_labels.to("cpu")],
         )
 
     plt.xlim(xx.min(), xx.max())
@@ -333,7 +336,7 @@ def get_main(device, holder):
             min=100, max=2000, step=100, value=500, continuous_update=False
         ),
         n_selection_samples=widgets.IntSlider(
-            min=0, max=2000, step=100, value=0, continuous_update=False
+            min=0, max=2000, step=100, value=800, continuous_update=False
         ),
         centers=widgets.IntSlider(
             min=2, max=10, step=1, value=3, continuous_update=False
@@ -382,7 +385,7 @@ def get_main(device, holder):
     ):
 
 
-        space = (-0.5,0.5,-1,1) if zoom else  (-10,10,-10,2)
+        space = (-0.5,0.5,-0.5,0.1) if zoom else  (-10,10,-10,2)
         
         centers = [[0, 0], [-dist_common, dist_rare], [dist_common, dist_rare]]
 
@@ -399,17 +402,20 @@ def get_main(device, holder):
         selection_data, selection_labels = make_blob_torch(
             n_selection_samples, centers, cluster_std, rand_state, ratio, device
         )
+
+        mask = (selection_labels==0)
+
         vizu_proba(
             holder.model,
             holder.data,
             holder.labels,
             device,
-            selection_data,
-            selection_labels,
-            space = space,
+            selection_data[mask],
+            selection_labels[mask],
+            space = space, 
         )
 
-        plt.title("StandardNet selection function")
+        #  plt.title("StandardNet selection function")
         plt.show()
 
 

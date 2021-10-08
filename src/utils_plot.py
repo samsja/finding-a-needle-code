@@ -119,7 +119,7 @@ def plot_score_model(score, model, scores_df):
 
 
 
-def plot_all_model_mean(all_scores, scores_df,figsize=(10,15),rename_model=None,cmap="Spectral"):
+def plot_all_model_mean(all_scores, scores_df,figsize=(10,15),rename_model=None,cmap="viridis",legend=True):
     
     rename_model = {} if rename_model is None else rename_model
     
@@ -136,7 +136,7 @@ def plot_all_model_mean(all_scores, scores_df,figsize=(10,15),rename_model=None,
         
 
     
-    with sns.color_palette(cmap, n_colors=len(all_scores)):
+    with sns.color_palette(cmap, n_colors=len(scores_df["model"].unique())):
         for i,score in enumerate(all_scores):
            
             
@@ -171,15 +171,25 @@ def plot_all_model_mean(all_scores, scores_df,figsize=(10,15),rename_model=None,
 
                 plt.grid(b=True,color="grey", linewidth=1, axis="both", alpha=0.5)
 
-                plt.ylabel(f"{score}")
+                plt.ylabel(f"{score}",fontsize=11)
+                plt.ylim((0,1))
 
-        bbox_to_anchor = (-0.1, -0.15) if len(all_scores) != 2 else (0.5,-0.15)
-        plt.legend(
-            loc="upper center",
-            bbox_to_anchor=bbox_to_anchor,
-            shadow=False,
-            ncol=4,
-        )
+        
+
+        if len(all_scores) == 2 :
+            bbox_to_anchor = (0.5,-0.15)
+        elif len(all_scores)  == 1:
+            bbox_to_anchor = (0.5,-0.15)
+        else :
+            bbox_to_anchor = (-0.1, -0.15)
+
+        if legend:
+            plt.legend(
+                loc="upper center",
+                bbox_to_anchor=bbox_to_anchor,
+                shadow=False,
+                ncol=4,
+            )
 
 import pandas as pd
 import numpy as np
