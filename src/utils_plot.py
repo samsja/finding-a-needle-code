@@ -133,10 +133,12 @@ def plot_all_model_mean(all_scores, scores_df,figsize=(10,15),rename_model=None,
     df_mean = df.groupby(["model","iteration"],as_index=False).mean()
 
     fig = plt.figure(figsize=figsize)
-        
+       
 
-    
-    with sns.color_palette(cmap, n_colors=len(scores_df["model"].unique())):
+    cmap = sns.color_palette(cmap, n_colors=len(scores_df["model"].unique())) if type(cmap) == str else cmap
+
+
+    with cmap:
         for i,score in enumerate(all_scores):
            
             
@@ -171,8 +173,13 @@ def plot_all_model_mean(all_scores, scores_df,figsize=(10,15),rename_model=None,
 
                 plt.grid(b=True,color="grey", linewidth=1, axis="both", alpha=0.5)
 
-                plt.ylabel(f"{score}",fontsize=11)
-                plt.ylim((0,1))
+                if legend:
+                    plt.ylabel(f"{score}",fontsize=11)
+
+                if score == "train_size":
+                    pass
+                else:
+                    plt.ylim((0,1))
 
         
 
