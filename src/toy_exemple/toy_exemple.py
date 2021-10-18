@@ -253,16 +253,17 @@ def vizu_proba(model, X, y, device, selection_data, selection_labels, figsize=(5
     mask_rare = np.where(y==0)
     colormap = np.array(sns.color_palette("hls",8).as_hex())
 
-    plt.scatter(X[mask, 0], X[mask, 1], c=colormap[y[mask]], s=10)
-    plt.scatter(X[mask_rare, 0], X[mask_rare, 1], c=colormap[y[mask_rare]], s=100,marker="*")
-
+    plt.scatter(X[mask, 0], X[mask, 1], c=colormap[y[mask]], s=6,marker="o")
+    plt.scatter(X[mask_rare, 0], X[mask_rare, 1], c=colormap[y[mask_rare]], s=15,marker="o")
     if selection_data is not None:
         plt.scatter(
             selection_data.to("cpu")[:, 0],
             selection_data.to("cpu")[:, 1],
-            s=8,
-            marker="x",
-            c=colormap[selection_labels.to("cpu")],
+            s=12,
+            marker="s",
+            facecolors="none",
+            edgecolor=colormap[selection_labels.to("cpu")],
+            #  c=colormap[selection_labels.to("cpu")],
         )
 
     plt.xlim(xx.min(), xx.max())
@@ -400,18 +401,16 @@ def get_main(device, holder):
         )
 
         selection_data, selection_labels = make_blob_torch(
-            n_selection_samples, centers, cluster_std, rand_state, ratio, device
+            2*int(n_selection_samples*ratio), centers, cluster_std, rand_state, 0.5, device
         )
-
-        mask = (selection_labels==0)
 
         vizu_proba(
             holder.model,
             holder.data,
             holder.labels,
             device,
-            selection_data[mask],
-            selection_labels[mask],
+            selection_data,
+            selection_labels,
             space = space, 
         )
 
