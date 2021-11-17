@@ -386,11 +386,11 @@ def get_main(device, holder):
     ):
 
 
-        space = (-0.5,0.5,-0.5,0.1) if zoom else  (-10,10,-10,2)
+        space = (-0.25,0.5,-0.5,0.1) if zoom else  (-10,10,-10,2)
         
-        centers = [[0, 0], [-dist_common, dist_rare], [dist_common, dist_rare]]
+        centers = [[0, 0], [-dist_common, -dist_rare], [-dist_common, dist_rare]] 
 
-        rand_state = np.random.RandomState(4) #2
+        rand_state = np.random.RandomState(5) #2
 
         holder.data, holder.labels = make_blob_torch(
             n_train_samples, centers, cluster_std, rand_state, ratio, device

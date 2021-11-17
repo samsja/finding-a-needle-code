@@ -119,7 +119,7 @@ def plot_score_model(score, model, scores_df):
 
 
 
-def plot_all_model_mean(all_scores, scores_df,figsize=(10,15),rename_model=None,cmap="viridis",legend=True):
+def plot_all_model_mean(all_scores, scores_df,figsize=(10,15),rename_model=None,skip_color=None,legend=True,text=True,limit=None):
     
     rename_model = {} if rename_model is None else rename_model
     
@@ -134,69 +134,66 @@ def plot_all_model_mean(all_scores, scores_df,figsize=(10,15),rename_model=None,
 
     fig = plt.figure(figsize=figsize)
        
-
-    cmap = sns.color_palette(cmap, n_colors=len(scores_df["model"].unique())) if type(cmap) == str else cmap
-
-
-    with cmap:
-        for i,score in enumerate(all_scores):
-           
-            
-            if len(all_scores) == 2:
-                fig.add_subplot(2 , 1, i+1)
-            else:
-                fig.add_subplot(len(all_scores)//2 + 1, 2, i+1)
-            
-            for model in scores_df["model"].unique():
-                df_model = df_mean[df_mean["model"] == model]
-                x =  range(len(list(df_model[score])))
-                
-                if score == "train_size":
-                    y = [1] +  df_model[score].tolist()[:-1]
-                else:
-               
-                    y =  df_model[score]
-
-                plt.plot(
-                    x,
-                    y,
-                    label=rename_model[model],
-                    marker=".",
-                    linestyle=":",
-                    linewidth=2,
-                )
-
-                df_model_conf = df_conf[df_conf["model"] == model]
-                ci = df_model_conf[score]
-                plt.fill_between(x, (y-ci),(y+ci),alpha=0.1)
-
-
-                plt.grid(b=True,color="grey", linewidth=1, axis="both", alpha=0.5)
-
-                if legend:
-                    plt.ylabel(f"{score}",fontsize=11)
-
-                if score == "train_size":
-                    pass
-                else:
-                    plt.ylim((0,1))
-
+    for i,score in enumerate(all_scores):
+                  
+        if len(all_scores) == 2:
+            fig.add_subplot(2 , 1, i+1)
+        else:
+            fig.add_subplot(len(all_scores), 1, i+1)
         
+        for model in scores_df["model"].unique():
+            df_model = df_mean[df_mean["model"] == model]
+            x =  range(len(list(df_model[score])))
+            
+            if score in ["train_size","N_tp"]:
+                y = [1] +  df_model[score].tolist()[:-1]
+            else:
+           
+                y =  df_model[score]
 
-        if len(all_scores) == 2 :
-            bbox_to_anchor = (0.5,-0.15)
-        elif len(all_scores)  == 1:
-            bbox_to_anchor = (0.5,-0.15)
-        else :
-            bbox_to_anchor = (-0.1, -0.15)
-
-        if legend:
-            plt.legend(
-                loc="upper center",
-                bbox_to_anchor=bbox_to_anchor,
-                shadow=False,
-                ncol=4,
+            if skip_color:
+                for _ in range(skip_color):
+                    plt.plot([],[])
+            plt.plot(
+                x,
+                y,
+                label=rename_model[model],
+                marker=".",
+                linestyle=":",
+                linewidth=2,
             )
+
+            df_model_conf = df_conf[df_conf["model"] == model]
+            ci = df_model_conf[score]
+            plt.fill_between(x, (y-ci),(y+ci),alpha=0.1)
+
+
+            plt.grid(b=True,color="grey", linewidth=1, axis="both", alpha=0.5)
+
+            if legend:
+                plt.ylabel(f"{score}",fontsize=11)
+
+            if score in ["train_size","N_tp"]:
+                pass
+            else:
+                plt.ylim((0,1))
+
+            if text:
+                plt.text(0,[45,0.8][i],"ABCDEFG"[i],fontsize=11,fontweight="light")
+
+       
+            if score == "train_size" and limit:
+                plt.plot(x,[limit]*len(y),linewidth=1,color="grey")
+
+    
+    bbox_to_anchor = (0.5, -0.15)
+    if legend:
+        plt.legend(
+            loc="upper center",
+            bbox_to_anchor=bbox_to_anchor,
+            shadow=False,
+            ncol=4,
+        )
 
 import pandas as pd
 import numpy as np
