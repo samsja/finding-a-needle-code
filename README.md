@@ -1,7 +1,6 @@
-# Learning to recognise rare traffic signs
+# Improving traffic sign recognition by active search
 
 This repo contains code for the paper : "Learning to recognise rare traffic signs"
-enses. 
 
 ## How to use this code 
 
@@ -20,12 +19,25 @@ python src/patch_extraction.py --img_path=MAPILLARY_FOLDER/images --annot_path=M
 ### run the script
 
 
+* For the active loop on the 25 rarest traffic signs classes
 ```shell
-python searching.py  --runs=10 --model=StandardNet  --dataset=2 --result_file=standard-net-searching.pkl 
+python active_loop.py --top=50 --ep=5  --model=StandardNet --result_file=standard-net-al.pkl
 ```
 
+* For the active loop on synthetic data:
 ```shell
-python active_loop.py --ep=10 --top=50 --runs=1 --model=StandardNet --dataset=1 --result_file=standard-net-al.pkl
+python active_loop.py --top=50 --ep=5  --limit_search=50 --model=StandardNet --result_file=non-synthetic-al.pkl --dataset=0
+python active_loop.py --top=50 --ep=5  --limit_search=50 --model=StandardNet --result_file=synthetic-al.pkl --dataset=2
+```
+
+* For the active loop with few shot learning:
+```shell
+python active_loop.py --top=50 --ep=5  --model=ProtoNetFull --result_file=proto-net-al.pkl
+```
+
+* For the searching only:
+```shell
+python searching.py  --model=StandardNet  --result_file=standard-net-searching.pkl 
 ```
 
 

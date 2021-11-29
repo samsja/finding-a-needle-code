@@ -119,7 +119,7 @@ def plot_score_model(score, model, scores_df):
 
 
 
-def plot_all_model_mean(all_scores, scores_df,figsize=(10,15),rename_model=None,skip_color=None,legend=True,text=True,limit=None):
+def plot_all_model_mean(all_scores, scores_df,figsize=(10,15),rename_model=None,skip_color=None,legend=True,limit=None):
     
     rename_model = {} if rename_model is None else rename_model
     
@@ -146,7 +146,7 @@ def plot_all_model_mean(all_scores, scores_df,figsize=(10,15),rename_model=None,
             x =  range(len(list(df_model[score])))
             
             if score in ["train_size","N_tp"]:
-                y = [1] +  df_model[score].tolist()[:-1]
+                y = [1] +  df_model[score].tolist()[:-1] 
             else:
            
                 y =  df_model[score]
@@ -159,31 +159,28 @@ def plot_all_model_mean(all_scores, scores_df,figsize=(10,15),rename_model=None,
                 y,
                 label=rename_model[model],
                 marker=".",
-                linestyle=":",
-                linewidth=2,
+                linestyle="-",
+                linewidth=1,
             )
 
             df_model_conf = df_conf[df_conf["model"] == model]
             ci = df_model_conf[score]
-            plt.fill_between(x, (y-ci),(y+ci),alpha=0.1)
+            plt.fill_between(x, (y-ci),(y+ci),alpha=0.2)
 
 
-            plt.grid(b=True,color="grey", linewidth=1, axis="both", alpha=0.5)
+            plt.grid(b=True,color="grey", linewidth=1, axis="both", alpha=0.15)
 
             if legend:
-                plt.ylabel(f"{score}",fontsize=11)
+                plt.ylabel(f"{score}",fontsize=8)
 
             if score in ["train_size","N_tp"]:
-                pass
+                plt.ylim((-7,55)) 
             else:
                 plt.ylim((0,1))
 
-            if text:
-                plt.text(0,[45,0.8][i],"ABCDEFG"[i],fontsize=11,fontweight="light")
-
        
             if score == "train_size" and limit:
-                plt.plot(x,[limit]*len(y),linewidth=1,color="grey")
+                plt.plot(x,[limit]*len(y),linewidth=2,color="grey",linestyle=":",alpha=0.3)
 
     
     bbox_to_anchor = (0.5, -0.15)

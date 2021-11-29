@@ -229,7 +229,7 @@ def vizu(model, X, y, device, figsize=(17, 7)):
     plt.ylim(yy.min(), yy.max())
 
 
-def vizu_proba(model, X, y, device, selection_data, selection_labels, figsize=(5, 5),space=(-1,1,-1,1)):
+def vizu_proba(model, X, y, device, selection_data, selection_labels, figsize=(7, 4),space=(-1,1,-1,1)):
     h = 0.05
     X = X.to("cpu")
     y = y.to("cpu")
@@ -246,6 +246,7 @@ def vizu_proba(model, X, y, device, selection_data, selection_labels, figsize=(5
     Z = Z.to("cpu").numpy().reshape(xx.shape)
 
     fig = plt.figure(figsize=figsize)
+
     cs = plt.contourf(xx, yy, Z, cmap=plt.cm.get_cmap("Greys"), alpha=0.8)
     plt.colorbar(cs)
 

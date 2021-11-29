@@ -19,7 +19,7 @@ if __name__ == "__main__":
     parser.add_argument("--result_file",type=str)
     parser.add_argument("--limit_search",default=None,type=int)
     parser.add_argument("--path_data",default= "/staging/thesis_data_search/data",type=str)
-    parser.add_argument("--dataset",default=0,type=int)
+    parser.add_argument("--dataset",default=1,type=int)
     
     args = parser.parse_args()
 
