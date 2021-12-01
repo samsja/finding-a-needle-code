@@ -1,6 +1,6 @@
 # Improving traffic sign recognition by active search
 
-This repo contains code for the paper : "Learning to recognise rare traffic signs"
+This repo contains code for the paper : [Improving traffic sign recognition by active search](https://arxiv.org/abs/2111.14426)
 
 ## How to use this code 
 
