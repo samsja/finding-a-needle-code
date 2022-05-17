@@ -1,6 +1,7 @@
 import torch
 from typing import List
 
+
 class FewShotDataSet(torch.utils.data.Dataset):
     """
     Pytorch DataSet that work for few shot dataset sampler
@@ -27,7 +28,6 @@ class FewShotDataSet(torch.utils.data.Dataset):
         """
         raise NotImplementedError
 
-    
     def get_index_in_class_vect(self, class_idx: List[int]):
         """
         Method to get the indexes of the elements in the same class as class_idx

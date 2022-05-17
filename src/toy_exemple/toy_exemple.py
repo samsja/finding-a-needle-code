@@ -17,6 +17,7 @@ import ipywidgets as widgets
 from ipywidgets import fixed, interact, interact_manual, interactive
 import seaborn as sns
 
+
 def make_blob_torch(n_samples, centers, cluster_std, random_state, ratio, device):
     X, y = make_blobs_few_shot(
         *make_blobs(
@@ -229,7 +230,16 @@ def vizu(model, X, y, device, figsize=(17, 7)):
     plt.ylim(yy.min(), yy.max())
 
 
-def vizu_proba(model, X, y, device, selection_data, selection_labels, figsize=(7, 4),space=(-1,1,-1,1)):
+def vizu_proba(
+    model,
+    X,
+    y,
+    device,
+    selection_data,
+    selection_labels,
+    figsize=(7, 4),
+    space=(-1, 1, -1, 1),
+):
     h = 0.05
     X = X.to("cpu")
     y = y.to("cpu")
@@ -250,12 +260,14 @@ def vizu_proba(model, X, y, device, selection_data, selection_labels, figsize=(7
     cs = plt.contourf(xx, yy, Z, cmap=plt.cm.get_cmap("Greys"), alpha=0.8)
     plt.colorbar(cs)
 
-    mask = np.where(y!=0)
-    mask_rare = np.where(y==0)
-    colormap = np.array(sns.color_palette("hls",8).as_hex())
+    mask = np.where(y != 0)
+    mask_rare = np.where(y == 0)
+    colormap = np.array(sns.color_palette("hls", 8).as_hex())
 
-    plt.scatter(X[mask, 0], X[mask, 1], c=colormap[y[mask]], s=6,marker="o")
-    plt.scatter(X[mask_rare, 0], X[mask_rare, 1], c=colormap[y[mask_rare]], s=15,marker="o")
+    plt.scatter(X[mask, 0], X[mask, 1], c=colormap[y[mask]], s=6, marker="o")
+    plt.scatter(
+        X[mask_rare, 0], X[mask_rare, 1], c=colormap[y[mask_rare]], s=15, marker="o"
+    )
     if selection_data is not None:
         plt.scatter(
             selection_data.to("cpu")[:, 0],
@@ -383,15 +395,14 @@ def get_main(device, holder):
         balanced_loss=False,
         proto_net=False,
         relation_net=False,
-        zoom = True,
+        zoom=True,
     ):
 
+        space = (-0.25, 0.5, -0.5, 0.1) if zoom else (-10, 10, -10, 2)
 
-        space = (-0.25,0.5,-0.5,0.1) if zoom else  (-10,10,-10,2)
-        
-        centers = [[0, 0], [-dist_common, -dist_rare], [-dist_common, dist_rare]] 
+        centers = [[0, 0], [-dist_common, -dist_rare], [-dist_common, dist_rare]]
 
-        rand_state = np.random.RandomState(5) #2
+        rand_state = np.random.RandomState(5)  # 2
 
         holder.data, holder.labels = make_blob_torch(
             n_train_samples, centers, cluster_std, rand_state, ratio, device
@@ -402,7 +413,12 @@ def get_main(device, holder):
         )
 
         selection_data, selection_labels = make_blob_torch(
-            2*int(n_selection_samples*ratio), centers, cluster_std, rand_state, 0.5, device
+            2 * int(n_selection_samples * ratio),
+            centers,
+            cluster_std,
+            rand_state,
+            0.5,
+            device,
         )
 
         vizu_proba(
@@ -412,12 +428,11 @@ def get_main(device, holder):
             device,
             selection_data,
             selection_labels,
-            space = space, 
+            space=space,
         )
 
         #  plt.title("StandardNet selection function")
         plt.show()
-
 
         if proto_net:
             protonet_model = get_protonet_model(holder.data, holder.labels)

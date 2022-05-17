@@ -32,19 +32,23 @@ if "bokeh_app" in __name__ or __name__ == "__main__":
 
     plot = bokeh.plotting.figure(width=1000, height=1000, tooltips=tooltips)
 
-    mapper = bokeh.transform.linear_cmap(field_name='class_color', palette=Category10[6] ,low=0 ,high=len(df_plot["class"].unique()))
-
-    plot.star(
-        source=df_plot[df_plot["type"] == "train"],color=mapper,size=20
+    mapper = bokeh.transform.linear_cmap(
+        field_name="class_color",
+        palette=Category10[6],
+        low=0,
+        high=len(df_plot["class"].unique()),
     )
 
-    plot.square(
-        source=df_plot[df_plot["type"] == "found"],color=mapper,
+    plot.star(source=df_plot[df_plot["type"] == "train"], color=mapper, size=20)
 
+    plot.square(
+        source=df_plot[df_plot["type"] == "found"],
+        color=mapper,
     )
 
     plot.triangle(
-        source=df_plot[df_plot["type"] == "miss"],color=mapper,
+        source=df_plot[df_plot["type"] == "miss"],
+        color=mapper,
     )
 
     if __name__ == "__main__":

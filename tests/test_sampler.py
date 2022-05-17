@@ -91,13 +91,12 @@ class TestFewShotSampler2(unittest.TestCase):
         )
 
 
-
 class UnBalancedSampler(FewShotDataSet):
     def __init__(self):
         super().__init__()
 
         self._classes = torch.arange(5)
-        self._length_of_class = torch.Tensor([1,100,5,10,2]).long()
+        self._length_of_class = torch.Tensor([1, 100, 5, 10, 2]).long()
 
     def __getitem__(self, idx):
         return (torch.zeros((10, 10)), 0)
@@ -147,4 +146,3 @@ class TestFewShotSamplerUnbalanced(unittest.TestCase):
             self.ep * self.k * (self.n + self.q),
             1,
         )
-

@@ -7,13 +7,10 @@ import torchvision.transforms.functional as TF
 from tqdm.autonotebook import tqdm
 import random
 import copy
-from typing import Iterator, Tuple,Callable
+from typing import Iterator, Tuple, Callable
 import numpy as np
 
 import contextlib
-
-
-
 
 
 class RotationTransform:
@@ -97,7 +94,6 @@ class TrainerFewShot:
 
         return loss
 
-
     def _get_data_from_batch(self, batch):
 
         try:
@@ -117,7 +113,7 @@ class TrainerFewShot:
         eval_taskloader: torch.utils.data.DataLoader,
         silent=False,
         tqdm_on_batch=False,
-        profiler_call: Callable = None, 
+        profiler_call: Callable = None,
     ):
         period_eval = max(epochs // nb_eval, 1)
 
@@ -139,9 +135,9 @@ class TrainerFewShot:
                     )
 
                     list_loss_batch.append(loss.item())
-                    
+
                     profiler.step()
-                    
+
             self.list_loss.append(sum(list_loss_batch) / len(list_loss_batch))
 
             scheduler.step()
@@ -288,7 +284,7 @@ class TrainerFewShot:
 
         losses = []
 
-        for lr in tqdm(linspace_lr, disable = silent ):
+        for lr in tqdm(linspace_lr, disable=silent):
 
             for param_group in optim.param_groups:
                 param_group["lr"] = lr
@@ -299,13 +295,12 @@ class TrainerFewShot:
             losses.append(
                 self.train_model(inputs.to(self.device), labels.to(self.device), optim)
             )
-        losses = [loss.to("cpu").detach().numpy() for loss in losses ]
+        losses = [loss.to("cpu").detach().numpy() for loss in losses]
 
         self.model_adaptater.model = model_init
 
-        plt.plot(linspace_lr,losses)
-        plt.xscale('log')
-        
+        plt.plot(linspace_lr, losses)
+        plt.xscale("log")
 
 
 def get_miss_match_few_shot(
@@ -406,15 +401,11 @@ def plot_miss_match(miss_match_tuple, img_from_tensor=lambda x: x, figsize=(7, 7
         list_available[row] += 1
 
 
-
 class NoProfiler:
-
     def step(self):
         pass
+
 
 @contextlib.contextmanager
 def no_profiler():
     yield NoProfiler()
-
-
-

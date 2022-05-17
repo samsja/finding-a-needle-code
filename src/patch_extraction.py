@@ -6,6 +6,7 @@ import sys
 import click
 from tqdm.auto import tqdm
 
+
 @click.command()
 @click.option("--img_path", required=True, help="the path to the image folder")
 @click.option("--annot_path", required=True, help="the path to the annotation folder")
@@ -17,8 +18,7 @@ def main(img_path, annot_path, output_path):
     output_path_images = f"{output_path}/images"
     output_path_annotations = f"{output_path}/annotations"
 
-
-    list_file =  os.listdir(annot_path) 
+    list_file = os.listdir(annot_path)
 
     for json_filename in tqdm(list_file):
 
@@ -38,7 +38,6 @@ def main(img_path, annot_path, output_path):
             continue
 
         signs_ = data["objects"]
-
 
         for sign in signs_:
             if "NotListed" not in sign["label"]:

@@ -6,6 +6,7 @@ from torchvision.models import resnet18
 from .utils_train import ModuleAdaptater
 from tqdm.auto import tqdm
 
+
 class ProtoNet(torch.nn.Module):
     """
     Implementation of the ProtoNet model in pytorch
@@ -15,7 +16,7 @@ class ProtoNet(torch.nn.Module):
         debug: bool. if true debug mode activate defaulf  False
     """
 
-    def __init__(self, in_channels: int, debug: bool = False,pretrain=True):
+    def __init__(self, in_channels: int, debug: bool = False, pretrain=True):
         super().__init__()
 
         self.debug = debug
@@ -173,11 +174,10 @@ class ProtoNetAdaptater(ModuleAdaptater):
         for idx, batch in enumerate(tqdm(test_taskloader, disable=tqdm_silent)):
 
             query_inputs = batch["img"].to(self.device)
-            
+
             query_features = self.model(query_inputs.to(self.device))
 
             batch_dists = self.get_dist(support_vector, query_features).squeeze(-1)
-
 
             dists.append(batch_dists)
             index.append(batch["id"].long().to(self.device))

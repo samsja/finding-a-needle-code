@@ -12,6 +12,7 @@ from typing import List
 
 from torchvision.datasets.folder import default_loader
 
+
 def get_file_name_from_folder(root_dir, exclude_class):
 
     list_of_datapoints = []
@@ -26,11 +27,18 @@ def get_file_name_from_folder(root_dir, exclude_class):
 
             label_list.append(c)
 
-    return list_of_datapoints,label_list
+    return list_of_datapoints, label_list
 
 
 class TrafficSignDataset(FewShotDataSet):
-    def __init__(self, file_names : List[str], label_list : List[str], transform, root_dir : str,exclude_class: List[int] = []):
+    def __init__(
+        self,
+        file_names: List[str],
+        label_list: List[str],
+        transform,
+        root_dir: str,
+        exclude_class: List[int] = [],
+    ):
         super().__init__()
         """
         Args:
@@ -48,30 +56,26 @@ class TrafficSignDataset(FewShotDataSet):
 
         for fn in file_names:
             label = fn.split("/")[-2]
-            
+
             label_idx = self.labels_str.index(label)
- 
-            if label_idx not in exclude_class:          
+
+            if label_idx not in exclude_class:
                 self.labels.append(label_idx)
                 self.data.append(f"{root_dir}/{fn}")
 
-        
         self._unique_classes = torch.tensor(self.labels).unique()
         self._classes = torch.arange(self._unique_classes.size(0))
-
 
         self.update_classes_indexes()
 
         self.transform = transform
-
 
     def __len__(self):
         return len(self.labels)
 
     def update_classes_indexes(self):
 
-
-        self.classes_indexes = [[] for _ in range(len(self.classes_indexes) )]
+        self.classes_indexes = [[] for _ in range(len(self.classes_indexes))]
         for index, label_idx in enumerate(self.labels):
             self.classes_indexes[label_idx].append(index)
 
@@ -98,7 +102,9 @@ class TrafficSignDataset(FewShotDataSet):
 
         """
 
-        return _script_get_index_in_class_vect(class_idx_vect, self.classes_indexes,self._unique_classes)
+        return _script_get_index_in_class_vect(
+            class_idx_vect, self.classes_indexes, self._unique_classes
+        )
 
     def __getitem__(self, idx):
         y = self.labels[idx]
@@ -108,15 +114,12 @@ class TrafficSignDataset(FewShotDataSet):
         x = default_loader(url)
         x = self.transform(x)
 
-        if not(type(idx)==torch.Tensor):
+        if not (type(idx) == torch.Tensor):
             idx = torch.Tensor([idx]).clone().detach()
 
-        data = {"img": x, 
-                "label": torch.tensor(y), 
-                "id": idx}
+        data = {"img": x, "label": torch.tensor(y), "id": idx}
 
         return data
-
 
     def get_support(self, n, k):
         indices = self.get_index_in_class(k).tolist()
@@ -168,7 +171,7 @@ class TrafficSignDataset(FewShotDataSet):
 
         self.data.insert(i, file_name)
         self.labels.insert(i, c_idx)
- 
+
         self._unique_classes = torch.tensor(self.labels).unique()
         self._classes = torch.arange(self._unique_classes.size(0))
 
@@ -181,19 +184,22 @@ class TrafficSignDataset(FewShotDataSet):
 
         """
 
-        self.data = [i for  j, i in enumerate(self.data) if j not in ids]
+        self.data = [i for j, i in enumerate(self.data) if j not in ids]
 
-        self.labels = [i for  j, i in enumerate(self.labels) if j not in ids]
- 
+        self.labels = [i for j, i in enumerate(self.labels) if j not in ids]
+
         self._unique_classes = torch.tensor(self.labels).unique()
         self._classes = torch.arange(self._unique_classes.size(0))
+
 
 from typing import Dict, List
 
 
 @torch.jit.script
 def _script_get_index_in_class_vect(
-    class_idx_vect: torch.Tensor, classes_indexes: List[torch.Tensor], unique_classes : torch.Tensor
+    class_idx_vect: torch.Tensor,
+    classes_indexes: List[torch.Tensor],
+    unique_classes: torch.Tensor,
 ):
     """
     vectorized Method to get the indexes of the elements in the same class as class_idx

@@ -7,6 +7,7 @@ from torchvision.models import resnet18
 import copy
 from tqdm.autonotebook import tqdm
 
+
 def get_conv_block_mp(
     in_channels: int, out_channels: int, padding: int = 0
 ) -> nn.Module:
@@ -165,6 +166,7 @@ class BasicRelationModule(nn.Module):
 
         return x
 
+
 class VeryBasicRelationModule(nn.Module):
     def __init__(
         self, input_size: int, hidden_size: int = 8, linear_size: int = None, lazy=False
@@ -318,7 +320,11 @@ class RelationNet(torch.nn.Module):
         features = self.embedding(inputs)
 
         return self.forward_on_features(
-            features, episodes, sample_per_class, classes_per_ep, queries,
+            features,
+            episodes,
+            sample_per_class,
+            classes_per_ep,
+            queries,
         )
 
     def forward_on_features(
@@ -415,23 +421,26 @@ class RelationNetAdaptater(ModuleAdaptater):
         test_taskloader: torch.utils.data.DataLoader,
         support_set: torch.Tensor,
         rare_class_index: int,
-        tqdm_silent = False,
+        tqdm_silent=False,
     ):
 
         self.model.eval()
 
         relations = []
         index = []
-        for idx, batch in enumerate(tqdm(test_taskloader,disable=tqdm_silent)):
+        for idx, batch in enumerate(tqdm(test_taskloader, disable=tqdm_silent)):
 
             query_inputs = batch["img"].to(self.device)
 
             inputs = torch.cat([support_set.to(self.device), query_inputs])
 
             batch_relations = self.model(
-                inputs.to(self.device), self.nb_ep, support_set.shape[0], self.k, query_inputs.shape[0]
+                inputs.to(self.device),
+                self.nb_ep,
+                support_set.shape[0],
+                self.k,
+                query_inputs.shape[0],
             )[0][0][0]
-
 
             relations.append(batch_relations)
             index.append(batch["id"].long().to(self.device))
@@ -442,8 +451,6 @@ class RelationNetAdaptater(ModuleAdaptater):
         relations, argsort = torch.sort(relations, descending=True)
 
         return index[argsort], relations
-
-
 
     def get_mismatch_inputs(
         self, inputs
@@ -491,6 +498,8 @@ class RelationNetAdaptater(ModuleAdaptater):
 
 
 from torchvision.models import resnet18
+
+
 def get_relation_net_adaptater(nb_ep, n, k, q, device):
 
     model = RelationNet(

@@ -3,6 +3,7 @@ import torch
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+
 def img_from_tensor(inp):
     inp = inp.to("cpu").numpy().transpose((1, 2, 0))
     mean = np.array([0.485, 0.456, 0.406])
@@ -13,17 +14,23 @@ def img_from_tensor(inp):
     return inp
 
 
-def imshow(inp, title=None,aspect=None):
+def imshow(inp, title=None, aspect=None):
     """Imshow for Tensor."""
     inp = img_from_tensor(inp)
-    plt.imshow(inp,aspect=aspect)
+    plt.imshow(inp, aspect=aspect)
     plt.axis("off")
     if title is not None:
         plt.title(title)
 
 
 def plot_list(
-    images, title=None, ncols=4, figsize=(8, 8), img_from_tensor=img_from_tensor,aspect=None,space = None,
+    images,
+    title=None,
+    ncols=4,
+    figsize=(8, 8),
+    img_from_tensor=img_from_tensor,
+    aspect=None,
+    space=None,
 ):
 
     if ncols > len(images):
@@ -37,14 +44,18 @@ def plot_list(
     rows = quotient + 1 if rest > 0 else quotient
     for i in range(1, len(images) + 1):
         fig.add_subplot(rows, columns, i)
-        imshow(images[i - 1], title=title[i - 1] if title is not None else None,aspect = aspect)
+        imshow(
+            images[i - 1],
+            title=title[i - 1] if title is not None else None,
+            aspect=aspect,
+        )
         plt.axis("off")
 
         if space is None:
-            space = (0.1,0.1) if title is None else (0.1,0)
-        
+            space = (0.1, 0.1) if title is None else (0.1, 0)
+
         fig.subplots_adjust(wspace=space[0], hspace=space[1])
-    
+
     plt.show()
 
 
@@ -66,7 +77,7 @@ def plot_search(
         figsize=figsize,
         img_from_tensor=img_from_tensor,
         ncols=ncols,
-        aspect="auto"
+        aspect="auto",
     )
 
 
@@ -84,7 +95,7 @@ def plot_image_to_find(class_to_search_for, test_dataset, relation, top, max_len
 
     target_images = torch.stack([test_dataset[i]["img"] for i in index_to_find])
 
-    plot_list(target_images, title=title, ncols=6,figsize=(9,15))
+    plot_list(target_images, title=title, ncols=6, figsize=(9, 15))
 
 
 def plot_score_one_class(score, class_, scores_df):
@@ -118,42 +129,50 @@ def plot_score_model(score, model, scores_df):
     plot_score(score, scores_df[scores_df["model"] == model])
 
 
+def plot_all_model_mean(
+    all_scores,
+    scores_df,
+    figsize=(10, 15),
+    rename_model=None,
+    skip_color=None,
+    legend=True,
+    limit=None,
+):
 
-def plot_all_model_mean(all_scores, scores_df,figsize=(10,15),rename_model=None,skip_color=None,legend=True,limit=None):
-    
     rename_model = {} if rename_model is None else rename_model
-    
-    for  model in scores_df["model"].unique():
+
+    for model in scores_df["model"].unique():
         if model not in rename_model.keys():
             rename_model[model] = model
 
-
-    df = scores_df.groupby(["iteration","run_id","model"],as_index=False).mean()
-    df_conf = df.groupby(["model","iteration"],as_index=False).apply(lambda x :  int_conf_df(x,conf=0.95))
-    df_mean = df.groupby(["model","iteration"],as_index=False).mean()
+    df = scores_df.groupby(["iteration", "run_id", "model"], as_index=False).mean()
+    df_conf = df.groupby(["model", "iteration"], as_index=False).apply(
+        lambda x: int_conf_df(x, conf=0.95)
+    )
+    df_mean = df.groupby(["model", "iteration"], as_index=False).mean()
 
     fig = plt.figure(figsize=figsize)
-       
-    for i,score in enumerate(all_scores):
-                  
+
+    for i, score in enumerate(all_scores):
+
         if len(all_scores) == 2:
-            fig.add_subplot(2 , 1, i+1)
+            fig.add_subplot(2, 1, i + 1)
         else:
-            fig.add_subplot(len(all_scores), 1, i+1)
-        
+            fig.add_subplot(len(all_scores), 1, i + 1)
+
         for model in scores_df["model"].unique():
             df_model = df_mean[df_mean["model"] == model]
-            x =  range(len(list(df_model[score])))
-            
-            if score in ["train_size","N_tp"]:
-                y = [1] +  df_model[score].tolist()[:-1] 
+            x = range(len(list(df_model[score])))
+
+            if score in ["train_size", "N_tp"]:
+                y = [1] + df_model[score].tolist()[:-1]
             else:
-           
-                y =  df_model[score]
+
+                y = df_model[score]
 
             if skip_color:
                 for _ in range(skip_color):
-                    plt.plot([],[])
+                    plt.plot([], [])
             plt.plot(
                 x,
                 y,
@@ -165,24 +184,28 @@ def plot_all_model_mean(all_scores, scores_df,figsize=(10,15),rename_model=None,
 
             df_model_conf = df_conf[df_conf["model"] == model]
             ci = df_model_conf[score]
-            plt.fill_between(x, (y-ci),(y+ci),alpha=0.2)
+            plt.fill_between(x, (y - ci), (y + ci), alpha=0.2)
 
-
-            plt.grid(b=True,color="grey", linewidth=1, axis="both", alpha=0.15)
+            plt.grid(b=True, color="grey", linewidth=1, axis="both", alpha=0.15)
 
             if legend:
-                plt.ylabel(f"{score}",fontsize=8)
+                plt.ylabel(f"{score}", fontsize=8)
 
-            if score in ["train_size","N_tp"]:
-                plt.ylim((-7,55)) 
+            if score in ["train_size", "N_tp"]:
+                plt.ylim((-7, 55))
             else:
-                plt.ylim((0,1))
+                plt.ylim((0, 1))
 
-       
             if score == "train_size" and limit:
-                plt.plot(x,[limit]*len(y),linewidth=2,color="grey",linestyle=":",alpha=0.3)
+                plt.plot(
+                    x,
+                    [limit] * len(y),
+                    linewidth=2,
+                    color="grey",
+                    linestyle=":",
+                    alpha=0.3,
+                )
 
-    
     bbox_to_anchor = (0.5, -0.15)
     if legend:
         plt.legend(
@@ -192,20 +215,26 @@ def plot_all_model_mean(all_scores, scores_df,figsize=(10,15),rename_model=None,
             ncol=4,
         )
 
+
 import pandas as pd
 import numpy as np
 import scipy.stats as st
-def int_conf_series(series,conf=0.95):
-    min_int,max_int = st.t.interval(alpha=conf, df=len(series)-1, loc=series.mean(), scale=st.sem(series))
 
-    return (max_int-min_int)/2
 
-def int_conf_df(df,conf=0.95):
+def int_conf_series(series, conf=0.95):
+    min_int, max_int = st.t.interval(
+        alpha=conf, df=len(series) - 1, loc=series.mean(), scale=st.sem(series)
+    )
+
+    return (max_int - min_int) / 2
+
+
+def int_conf_df(df, conf=0.95):
     series_conf = {}
     for key in df.columns:
-        if df[key].dtype in [np.int64,np.float64]:
-            series_conf[key]=int_conf_series(df[key])
-        else :
-            series_conf[key]=df[key].iloc[0]
+        if df[key].dtype in [np.int64, np.float64]:
+            series_conf[key] = int_conf_series(df[key])
+        else:
+            series_conf[key] = df[key].iloc[0]
 
     return pd.Series(series_conf)

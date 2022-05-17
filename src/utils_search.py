@@ -18,7 +18,7 @@ from src.searcher.searcher import (
     ProtoNetSearcher,
     NoAdditionalSearcher,
     StandardNetSearcher,
-    FreezedStandardNetSearcher
+    FreezedStandardNetSearcher,
 )
 
 from src.datasource import few_shot_param
@@ -34,13 +34,11 @@ def count_in_top(top, class_, test_dataset):
     return top_labels.count(class_)
 
 
-
 import copy
 
 
 def move_found_images(datapoint_to_add, train_dataset, test_dataset):
     len_train, len_test = len(train_dataset), len(test_dataset)
-
 
     for class_ in datapoint_to_add.keys():
         for datapoint in datapoint_to_add[class_]:
@@ -57,7 +55,6 @@ def move_found_images(datapoint_to_add, train_dataset, test_dataset):
 
     train_dataset.update_classes_indexes()
     test_dataset.update_classes_indexes()
-
 
 
 def train_and_search(
@@ -279,13 +276,13 @@ def exp_searching(
 
         elif model_adapter_search_param == "FreezedStandardNet":
             search_adaptater = FreezedStandardNetSearcher(
-                device, len(train_dataset.classes), class_to_search_on=class_to_search_on,debug=debug
+                device,
+                len(train_dataset.classes),
+                class_to_search_on=class_to_search_on,
+                debug=debug,
             )
-        else :
+        else:
             raise ValueError(f"{model_adapter_search_param} is incorect")
-
-
-
 
         search_adaptater.train_searcher(train_dataset, eval_dataset, num_workers)
 

@@ -7,6 +7,7 @@ from .utils_train import ModuleAdaptater
 
 from tqdm.autonotebook import tqdm
 
+
 class StandardNet(nn.Module):
     """
     Implementation of a standard ResNet classifier in pytorch
@@ -42,8 +43,6 @@ class StandardNet(nn.Module):
 
         for p in self.resnet.fc.parameters():
             p.requires_grad = True
-
-
 
     def unfreeze(self):
 
@@ -82,12 +81,12 @@ class StandardNetAdaptater(ModuleAdaptater):
         else:
             return loss, None
 
-    def _preds(self,outputs):
+    def _preds(self, outputs):
         _, preds = torch.max(outputs, 1)
         return preds
 
-    @torch.no_grad() 
-    def get_preds(self,inputs):
+    @torch.no_grad()
+    def get_preds(self, inputs):
         outputs = self.model(inputs)
         return self._preds(outputs)
 
@@ -96,7 +95,9 @@ class StandardNetAdaptater(ModuleAdaptater):
 
         for batch in dl:
             with torch.no_grad():
-                logits = self.model(batch["img"].to(device))[:, rare_class_index].tolist()
+                logits = self.model(batch["img"].to(device))[
+                    :, rare_class_index
+                ].tolist()
 
             l += list(zip(batch["id"], logits))
 
@@ -104,26 +105,27 @@ class StandardNetAdaptater(ModuleAdaptater):
 
         return list(zip(*l))[0]
 
-    
     @torch.no_grad()
     def search_tensor(
         self,
         test_taskloader: torch.utils.data.DataLoader,
         support_set: torch.Tensor,
         rare_class_index: int,
-        tqdm_silent = False,
+        tqdm_silent=False,
     ):
 
         self.model.eval()
 
         relations = []
         index = []
-        for idx, batch in enumerate(tqdm(test_taskloader,disable=tqdm_silent)):
+        for idx, batch in enumerate(tqdm(test_taskloader, disable=tqdm_silent)):
 
             query_inputs = batch["img"].to(self.device)
 
-            logits = F.softmax(self.model(batch["img"].to(self.device)),dim=1)[:, rare_class_index]
-    
+            logits = F.softmax(self.model(batch["img"].to(self.device)), dim=1)[
+                :, rare_class_index
+            ]
+
             relations.append(logits)
             index.append(batch["id"].long().to(self.device))
 
@@ -133,6 +135,7 @@ class StandardNetAdaptater(ModuleAdaptater):
         relations, argsort = torch.sort(relations, descending=True)
 
         return index[argsort], relations
+
 
 class SmartStandardNetAdaptater(StandardNetAdaptater):
     def __init__(
@@ -145,15 +148,13 @@ class SmartStandardNetAdaptater(StandardNetAdaptater):
         k: int = None,
         q: int = None,
     ):
-        super().__init__(model,device,nb_ep,n,k,q) 
+        super().__init__(model, device, nb_ep, n, k, q)
 
         self.weight = weight
 
-    def _preds(self,outputs):
-        out = outputs.detach().to("cpu").clone() # to avoid illegal memroy acces bug
-        balanced_output = self.weight*(out.softmax(dim=1))
-       
+    def _preds(self, outputs):
+        out = outputs.detach().to("cpu").clone()  # to avoid illegal memroy acces bug
+        balanced_output = self.weight * (out.softmax(dim=1))
+
         _, preds = torch.max(balanced_output, 1)
         return preds
-
-

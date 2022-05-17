@@ -198,6 +198,3 @@ def exp_active_loop(
     scores_df = pd.DataFrame(scores)
 
     return scores_df
-
-
-

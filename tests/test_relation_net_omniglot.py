@@ -5,7 +5,6 @@ import unittest
 import pytest
 
 
-
 class TestRelationNet(unittest.TestCase):
     def setUp(self):
 
@@ -38,7 +37,7 @@ class TestRelationNet(unittest.TestCase):
         features_queries = torch.rand(self.ep * self.k, self.q, self.f_dim, 5, 5)
         features_supports = torch.rand(self.ep * self.k, self.f_dim, 5, 5)
 
-        features_cat,_ = self.model._concat_features(
+        features_cat, _ = self.model._concat_features(
             features_supports, features_queries, self.ep, self.n, self.k, self.q
         )
 

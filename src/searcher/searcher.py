@@ -114,7 +114,7 @@ class ProtoNetSearcher(Searcher):
         self.debug = debug
         self.class_to_search_on = class_to_search_on
 
-        self.model = ProtoNet(3,pretrain=True).to(device)
+        self.model = ProtoNet(3, pretrain=True).to(device)
 
         self.model_adapter = ProtoNetAdaptater(self.model, 1, 1, 1, 1, device)
 
@@ -129,9 +129,7 @@ class ProtoNetSearcher(Searcher):
 
         self.device = device
 
-        self.optim = torch.optim.Adam(
-            self.model.parameters(), lr=ProtoNetSearcher.lr
-        )
+        self.optim = torch.optim.Adam(self.model.parameters(), lr=ProtoNetSearcher.lr)
         self.scheduler = torch.optim.lr_scheduler.StepLR(
             self.optim, step_size=1000, gamma=0.5
         )
@@ -171,7 +169,7 @@ class StandardNetSearcher(Searcher):
     def __init__(self, device, number_of_class, debug=False):
         self.device = device
         self.debug = debug
-        self.model = StandardNet(number_of_class,pretrained=True).to(device)
+        self.model = StandardNet(number_of_class, pretrained=True).to(device)
         self.model_adapter = StandardNetAdaptater(self.model, device)
         self.trainer = TrainerFewShot(self.model_adapter, device, checkpoint=True)
 
@@ -241,7 +239,7 @@ class FreezedStandardNetSearcher(StandardNetSearcher):
     def __init__(
         self, device, number_of_class, class_to_search_on, debug=False, num_worker=8
     ):
-        super().__init__(device, number_of_class , debug)
+        super().__init__(device, number_of_class, debug)
         self.class_to_search_on = class_to_search_on
         self.num_worker = 8
 
@@ -249,9 +247,12 @@ class FreezedStandardNetSearcher(StandardNetSearcher):
         self, train_dataset: FewShotDataSet, eval_dataset: FewShotDataSet, num_workers
     ):
 
-
-        train_dataset_exclude = copy_dataset_exclude_class(train_dataset,self.class_to_search_on)
-        eval_dataset_exclude = copy_dataset_exclude_class(eval_dataset,self.class_to_search_on)
+        train_dataset_exclude = copy_dataset_exclude_class(
+            train_dataset, self.class_to_search_on
+        )
+        eval_dataset_exclude = copy_dataset_exclude_class(
+            eval_dataset, self.class_to_search_on
+        )
 
         super().train_searcher(train_dataset_exclude, eval_dataset_exclude, num_workers)
 
@@ -261,7 +262,7 @@ class FreezedStandardNetSearcher(StandardNetSearcher):
         )
 
         self.model.freeze_mlp()
-        self.trainer = TrainerFewShot(self.model_adapter,self.device, checkpoint=True)
+        self.trainer = TrainerFewShot(self.model_adapter, self.device, checkpoint=True)
 
         super()._train(
             FreezedStandardNetSearcher.epochs,
