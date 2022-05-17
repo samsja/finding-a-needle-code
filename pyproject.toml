@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "thesis-data-search"
+version = "0.1.0"
+description = ""
+authors = ["sami jaghouar <sami.jaghouar@hotmail.fr>"]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+torch = "^1.11.0"
+torchvision = "^0.12.0"
+click = "^8.1.3"
+scikit-learn = "^1.1.0"
+tqdm = "^4.64.0"
+matplotlib = "^3.5.2"
+numpy = "^1.22.3"
+pandas = "^1.4.2"
+
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
