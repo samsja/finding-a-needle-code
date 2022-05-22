@@ -86,8 +86,9 @@ list_eval = dataset_to_files(dataset_eval, "data/cifar_100", "eval")
 list_test = dataset_to_files(dataset_test, "data/cifar_100", "test")
 
 with open("thesis_data_search/pickles/cifar_100/test.pkl", "wb") as f:
-    pickle.dump(list_train, f)
+    pickle.dump(list_test, f)
 with open("thesis_data_search/pickles/cifar_100/eval.pkl", "wb") as f:
     pickle.dump(list_eval, f)
 
-# # dataset
+with open("thesis_data_search/pickles/cifar_100/label_list.pkl", "wb") as f:
+    pickle.dump(dataset_train_eval.classes, f)

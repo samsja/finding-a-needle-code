@@ -326,6 +326,51 @@ def get_data_25_rare(path_data, N, limit_search=None):
     )
 
 
+def get_data_cifar(path_data, N, limit_search=None):
+    with open("thesis_data_search/pickles/cifar_100/train.pkl", "rb") as f:
+        list_train = pickle.load(f)
+
+    with open("thesis_data_search/pickles/cifar_100/eval.pkl", "rb") as f:
+        list_eval = pickle.load(f)
+
+    with open("thesis_data_search/pickles/cifar_100/test.pkl", "rb") as f:
+        list_test = pickle.load(f)
+
+    with open("thesis_data_search/pickles/cifar_100/label_list.pkl", "rb") as f:
+        label_list = pickle.load(f)
+
+    transform, transform_test = get_transform_cifar()
+    train_dataset = TrafficSignDataset(
+        list_train, label_list, transform=transform, root_dir=path_data
+    )
+    eval_dataset = TrafficSignDataset(
+        list_eval, label_list, transform=transform_test, root_dir=path_data
+    )
+    test_dataset = TrafficSignDataset(
+        list_test, label_list, transform=transform_test, root_dir=path_data
+    )
+
+    class_to_search_on = [81, 14, 3, 94, 35, 31, 28, 17, 13, 86]
+
+    for class_ in class_to_search_on:
+        train_dataset.remove_datapoints(train_dataset.get_index_in_class(class_)[N:])
+        train_dataset.update_classes_indexes()
+
+        assert len(train_dataset.get_index_in_class(class_)) == N
+
+    n_test = 20
+    for class_ in class_to_search_on:
+        test_dataset.remove_datapoints(test_dataset.get_index_in_class(class_)[n_test:])
+        test_dataset.update_classes_indexes()
+
+        assert len(test_dataset.get_index_in_class(class_)) == n_test
+
+    def get_dataset():
+        return train_dataset, eval_dataset, test_dataset
+
+    return class_to_search_on, get_dataset
+
+
 def prepare_dataset(
     class_to_search_for,
     idx_support,

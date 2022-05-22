@@ -1,11 +1,14 @@
-import torch
-
-from thesis_data_search.utils_active_loop import exp_active_loop
-from thesis_data_search.datasource import get_data_6_rare, get_data_25_rare, get_data_6_rare_sy
-
-
 import argparse
 
+import torch
+
+from thesis_data_search.datasource import (
+    get_data_6_rare,
+    get_data_6_rare_sy,
+    get_data_25_rare,
+    get_data_cifar,
+)
+from thesis_data_search.utils_active_loop import exp_active_loop
 
 if __name__ == "__main__":
 
@@ -40,7 +43,7 @@ if __name__ == "__main__":
 
     path_data = args.path_data
 
-    datasc = [get_data_6_rare, get_data_25_rare, get_data_6_rare_sy]
+    datasc = [get_data_6_rare, get_data_25_rare, get_data_6_rare_sy, get_data_cifar]
     class_to_search_on, init_data = datasc[args.dataset](
         path_data, N, args.limit_search
     )

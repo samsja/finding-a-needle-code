@@ -21,7 +21,7 @@ python thesis_data_search/patch_extraction.py --img_path=MAPILLARY_FOLDER/images
 
 * For the active loop on the 25 rarest traffic signs classes
 ```shell
-python active_loop.py --top=50 --ep=5  --model=StandardNet --result_file=standard-net-al.pkl
+python active_loop.py --top=50 --ep=5  --model=StandardNet --result_file=standard-net-al.pkl --path_data=path_to_data
 ```
 
 * For the active loop on synthetic data:
