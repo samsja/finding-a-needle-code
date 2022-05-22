@@ -1,18 +1,17 @@
-import torch
-import torchvision
-
+import copy
 import pickle
-
-from thesis_data_search.few_shot_learning.datasets import TrafficSignDataset
-from thesis_data_search.few_shot_learning.utils_train import TrainerFewShot
-
-from thesis_data_search.few_shot_learning import FewShotSampler2
-from torchvision.models import resnet18
-
-from thesis_data_search.few_shot_learning.datasets import FewShotDataSet
 from collections import namedtuple
 
-import copy
+import torch
+import torchvision
+from torchvision.models import resnet18
+
+from thesis_data_search.few_shot_learning import FewShotSampler2
+from thesis_data_search.few_shot_learning.datasets import (
+    FewShotDataSet,
+    TrafficSignDataset,
+)
+from thesis_data_search.few_shot_learning.utils_train import TrainerFewShot
 
 
 def get_transform():
@@ -30,6 +29,31 @@ def get_transform():
     transform_test = torchvision.transforms.Compose(
         [
             torchvision.transforms.Resize((128, 128)),
+            torchvision.transforms.ToTensor(),
+            torchvision.transforms.Normalize(
+                mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
+            ),
+        ]
+    )
+
+    return transform, transform_test
+
+
+def get_transform_cifar():
+    transform = torchvision.transforms.Compose(
+        [
+            torchvision.transforms.Resize(32),
+            torchvision.transforms.RandomCrop(30),
+            torchvision.transforms.ToTensor(),
+            torchvision.transforms.Normalize(
+                mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
+            ),
+        ]
+    )
+
+    transform_test = torchvision.transforms.Compose(
+        [
+            torchvision.transforms.Resize((32, 32)),
             torchvision.transforms.ToTensor(),
             torchvision.transforms.Normalize(
                 mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
