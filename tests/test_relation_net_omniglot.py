@@ -1,4 +1,4 @@
-from src.few_shot_learning import RelationNet
+from thesis_data_search.few_shot_learning import RelationNet
 import torch
 
 import unittest

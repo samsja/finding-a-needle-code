@@ -3,6 +3,8 @@ env/*
 
 data/*
 test-notebook/*
+notebook/*
+
 
 *.html
 

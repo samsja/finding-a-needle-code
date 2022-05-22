@@ -5,8 +5,8 @@ import torch
 
 import numpy as np
 from tqdm.autonotebook import tqdm
-from src.few_shot_learning.standard_net import StandardNet, StandardNetAdaptater
-from src.utils_search import (
+from thesis_data_search.few_shot_learning.standard_net import StandardNet, StandardNetAdaptater
+from thesis_data_search.utils_search import (
     train_and_search,
     EntropyAdaptater,
     RandomAdaptater,
@@ -15,12 +15,12 @@ from src.utils_search import (
 
 import pickle
 
-from src.few_shot_learning.utils_train import TrainerFewShot
+from thesis_data_search.few_shot_learning.utils_train import TrainerFewShot
 
-from src.datasource import init_few_shot_dataset, few_shot_param, FewShotParam
+from thesis_data_search.datasource import init_few_shot_dataset, few_shot_param, FewShotParam
 
 
-from src.searcher.searcher import (
+from thesis_data_search.searcher.searcher import (
     RelationNetSearcher,
     ProtoNetSearcher,
     NoAdditionalSearcher,

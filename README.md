@@ -13,7 +13,7 @@ before doing anything be sure to either work in a virtual environement where the
 * extract the patch
 
 ```shell
-python src/patch_extraction.py --img_path=MAPILLARY_FOLDER/images --annot_path=MAPILLARY_FOLDER/annotations --output_path=YOUR__OUTPUT_FOLDER/patches
+python thesis_data_search/patch_extraction.py --img_path=MAPILLARY_FOLDER/images --annot_path=MAPILLARY_FOLDER/annotations --output_path=YOUR__OUTPUT_FOLDER/patches
 ```
 
 ### run the script

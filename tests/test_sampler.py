@@ -1,5 +1,5 @@
-from src.few_shot_learning import RelationNet, FewShotSampler, FewShotSampler2
-from src.few_shot_learning.datasets import FewShotDataSet
+from thesis_data_search.few_shot_learning import RelationNet, FewShotSampler, FewShotSampler2
+from thesis_data_search.few_shot_learning.datasets import FewShotDataSet
 
 import torch
 

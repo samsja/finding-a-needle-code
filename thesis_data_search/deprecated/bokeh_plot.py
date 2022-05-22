@@ -14,7 +14,7 @@ if "bokeh_app" in __name__ or __name__ == "__main__":
     <div>
         <div>
             <img
-                src="file://@url" height="200" alt="@url" width="200"
+                thesis_data_search="file://@url" height="200" alt="@url" width="200"
                 style="float: left; margin: 0px 15px 15px 0px;"
                 border="2"
             ></img>

@@ -1,6 +1,6 @@
-from src.few_shot_learning.utils_train import TrainerFewShot
-from src.datasource import FewShotParam
-from src.few_shot_learning.relation_net import (
+from thesis_data_search.few_shot_learning.utils_train import TrainerFewShot
+from thesis_data_search.datasource import FewShotParam
+from thesis_data_search.few_shot_learning.relation_net import (
     RelationNet,
     RelationNetAdaptater,
     VeryBasicRelationModule,
@@ -73,8 +73,8 @@ def train(
     return model, acc
 
 
-from src.few_shot_learning.datasets import FewShotDataSet
-from src.few_shot_learning.sampler import FewShotSampler2
+from thesis_data_search.few_shot_learning.datasets import FewShotDataSet
+from thesis_data_search.few_shot_learning.sampler import FewShotSampler2
 
 
 class BlobFSDataSet(FewShotDataSet):

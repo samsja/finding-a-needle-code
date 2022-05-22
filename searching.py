@@ -1,8 +1,8 @@
 import torch
 
-from src.utils_search import exp_searching
+from thesis_data_search.utils_search import exp_searching
 
-from src.datasource import get_data_6_rare, get_data_25_rare, get_data_6_rare_sy
+from thesis_data_search.datasource import get_data_6_rare, get_data_25_rare, get_data_6_rare_sy
 
 import argparse
 

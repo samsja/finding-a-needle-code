@@ -1,7 +1,7 @@
 import torch
 
-from src.utils_active_loop import exp_active_loop
-from src.datasource import get_data_6_rare, get_data_25_rare, get_data_6_rare_sy
+from thesis_data_search.utils_active_loop import exp_active_loop
+from thesis_data_search.datasource import get_data_6_rare, get_data_25_rare, get_data_6_rare_sy
 
 
 import argparse

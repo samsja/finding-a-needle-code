@@ -2,18 +2,18 @@ import torch
 import pandas as pd
 from tqdm.autonotebook import tqdm
 
-from src.few_shot_learning.relation_net import (
+from thesis_data_search.few_shot_learning.relation_net import (
     RelationNet,
     RelationNetAdaptater,
     get_relation_net_adaptater,
     get_features_for_one_class,
 )
 
-from src.few_shot_learning.standard_net import StandardNet, StandardNetAdaptater
+from thesis_data_search.few_shot_learning.standard_net import StandardNet, StandardNetAdaptater
 
-from src.utils_plot import imshow
+from thesis_data_search.utils_plot import imshow
 
-from src.searcher.searcher import (
+from thesis_data_search.searcher.searcher import (
     RelationNetSearcher,
     ProtoNetSearcher,
     NoAdditionalSearcher,
@@ -21,9 +21,9 @@ from src.searcher.searcher import (
     FreezedStandardNetSearcher,
 )
 
-from src.datasource import few_shot_param
+from thesis_data_search.datasource import few_shot_param
 
-from src.utils_plot import (
+from thesis_data_search.utils_plot import (
     plot_search,
     plot_image_to_find,
 )

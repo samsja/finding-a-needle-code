@@ -2,22 +2,22 @@ import torch
 
 from torchvision.models import resnet18
 
-from src.few_shot_learning.utils_train import TrainerFewShot
-from src.few_shot_learning.datasets import FewShotDataSet
+from thesis_data_search.few_shot_learning.utils_train import TrainerFewShot
+from thesis_data_search.few_shot_learning.datasets import FewShotDataSet
 
 
-from src.few_shot_learning import RelationNet, RelationNetAdaptater
-from src.few_shot_learning.relation_net import (
+from thesis_data_search.few_shot_learning import RelationNet, RelationNetAdaptater
+from thesis_data_search.few_shot_learning.relation_net import (
     BasicRelationModule,
     ResNetEmbeddingModule,
 )
 
-from src.few_shot_learning.proto_net import ProtoNet, ProtoNetAdaptater
+from thesis_data_search.few_shot_learning.proto_net import ProtoNet, ProtoNetAdaptater
 
-from src.datasource import init_few_shot_dataset, copy_dataset_exclude_class
+from thesis_data_search.datasource import init_few_shot_dataset, copy_dataset_exclude_class
 
 
-from src.few_shot_learning.standard_net import StandardNet, StandardNetAdaptater
+from thesis_data_search.few_shot_learning.standard_net import StandardNet, StandardNetAdaptater
 
 
 class Searcher:

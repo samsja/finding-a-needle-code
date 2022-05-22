@@ -3,13 +3,13 @@ import torchvision
 
 import pickle
 
-from src.few_shot_learning.datasets import TrafficSignDataset
-from src.few_shot_learning.utils_train import TrainerFewShot
+from thesis_data_search.few_shot_learning.datasets import TrafficSignDataset
+from thesis_data_search.few_shot_learning.utils_train import TrainerFewShot
 
-from src.few_shot_learning import FewShotSampler2
+from thesis_data_search.few_shot_learning import FewShotSampler2
 from torchvision.models import resnet18
 
-from src.few_shot_learning.datasets import FewShotDataSet
+from thesis_data_search.few_shot_learning.datasets import FewShotDataSet
 from collections import namedtuple
 
 import copy
@@ -87,15 +87,15 @@ def init_dataset_raw(path_data, synthetic: list = []):
 
     transform, transform_test = get_transform()
 
-    with open("src/pickles/traineval_incl_partial.pkl", "rb") as f:
+    with open("thesis_data_search/pickles/traineval_incl_partial.pkl", "rb") as f:
         train_eval = pickle.load(f)
         train_eval = [x for x in train_eval if "partial" not in x]
 
-    with open("src/pickles/test_incl_partial.pkl", "rb") as f:
+    with open("thesis_data_search/pickles/test_incl_partial.pkl", "rb") as f:
         test = pickle.load(f)
         test = [x for x in test if "partial" not in x]
 
-    with open("src/pickles/class_list.pkl", "rb") as f:
+    with open("thesis_data_search/pickles/class_list.pkl", "rb") as f:
         label_list = pickle.load(f)
         train_, val_ = [], []
 
