@@ -137,6 +137,7 @@ def plot_all_model_mean(
     skip_color=None,
     legend=True,
     limit=None,
+    ylimit=(-7, 55),
 ):
 
     rename_model = {} if rename_model is None else rename_model
@@ -192,7 +193,7 @@ def plot_all_model_mean(
                 plt.ylabel(f"{score}", fontsize=8)
 
             if score in ["train_size", "N_tp"]:
-                plt.ylim((-7, 55))
+                plt.ylim(ylimit)
             else:
                 plt.ylim((0, 1))
 

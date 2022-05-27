@@ -403,7 +403,7 @@ def get_data_cifar_10(path_data, N, limit_search=None):
 
         assert len(train_dataset.get_index_in_class(class_)) == N
 
-    n_test = 20
+    n_test = 100
     for class_ in class_to_search_on:
         test_dataset.remove_datapoints(test_dataset.get_index_in_class(class_)[n_test:])
         test_dataset.update_classes_indexes()
