@@ -1,16 +1,16 @@
-import torchvision
-import random
-import torch
 import glob
 import os
-
-from .datasets import FewShotDataSet
-from torchvision import transforms
-from PIL import Image
-from tqdm.autonotebook import tqdm
+import random
 from typing import List
 
+import torch
+import torchvision
+from PIL import Image
+from torchvision import transforms
 from torchvision.datasets.folder import default_loader
+from tqdm.autonotebook import tqdm
+
+from .datasets import FewShotDataSet
 
 
 def get_file_name_from_folder(root_dir, exclude_class):
@@ -210,3 +210,31 @@ def _script_get_index_in_class_vect(
     """
 
     return [classes_indexes[unique_classes[c].item()] for c in class_idx_vect]
+
+
+class CarsDataset(TrafficSignDataset):
+    def __init__(self, cars_dataset):
+
+        file_names = []
+        label_list = []
+
+        for fn, label in cars_dataset._samples:
+            file_names.append(fn)
+            label_list.append(label)
+
+        self.data = []
+        self.labels = []
+        self.labels_str = cars_dataset.classes
+
+        self.classes_indexes = [[] for _ in self.labels_str]
+
+        for fn, label_idx in cars_dataset._samples:
+            self.labels.append(label_idx)
+            self.data.append(fn)
+
+        self._unique_classes = torch.tensor(self.labels).unique()
+        self._classes = torch.arange(self._unique_classes.size(0))
+
+        self.update_classes_indexes()
+
+        self.transform = cars_dataset.transform

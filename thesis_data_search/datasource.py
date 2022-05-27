@@ -1,17 +1,15 @@
 import copy
 import pickle
+import random
 from collections import namedtuple
 
 import torch
 import torchvision
-from torchvision.models import resnet18
+from torchvision.datasets import StanfordCars
 
 from thesis_data_search.few_shot_learning import FewShotSampler2
-from thesis_data_search.few_shot_learning.datasets import (
-    FewShotDataSet,
-    TrafficSignDataset,
-)
-from thesis_data_search.few_shot_learning.utils_train import TrainerFewShot
+from thesis_data_search.few_shot_learning.datasets import TrafficSignDataset
+from thesis_data_search.few_shot_learning.datasets.traffic_signs import CarsDataset
 
 
 def get_transform():
@@ -54,6 +52,31 @@ def get_transform_cifar():
     transform_test = torchvision.transforms.Compose(
         [
             torchvision.transforms.Resize((32, 32)),
+            torchvision.transforms.ToTensor(),
+            torchvision.transforms.Normalize(
+                mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
+            ),
+        ]
+    )
+
+    return transform, transform_test
+
+
+def get_transform_cars():
+    transform = torchvision.transforms.Compose(
+        [
+            torchvision.transforms.Resize(232),
+            torchvision.transforms.RandomCrop(224),
+            torchvision.transforms.ToTensor(),
+            torchvision.transforms.Normalize(
+                mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
+            ),
+        ]
+    )
+
+    transform_test = torchvision.transforms.Compose(
+        [
+            torchvision.transforms.Resize((224, 224)),
             torchvision.transforms.ToTensor(),
             torchvision.transforms.Normalize(
                 mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
@@ -326,51 +349,6 @@ def get_data_25_rare(path_data, N, limit_search=None):
     )
 
 
-def get_data_cifar(path_data, N, limit_search=None):
-    with open("thesis_data_search/pickles/cifar_100/train.pkl", "rb") as f:
-        list_train = pickle.load(f)
-
-    with open("thesis_data_search/pickles/cifar_100/eval.pkl", "rb") as f:
-        list_eval = pickle.load(f)
-
-    with open("thesis_data_search/pickles/cifar_100/test.pkl", "rb") as f:
-        list_test = pickle.load(f)
-
-    with open("thesis_data_search/pickles/cifar_100/label_list.pkl", "rb") as f:
-        label_list = pickle.load(f)
-
-    transform, transform_test = get_transform_cifar()
-    train_dataset = TrafficSignDataset(
-        list_train, label_list, transform=transform, root_dir=path_data
-    )
-    eval_dataset = TrafficSignDataset(
-        list_eval, label_list, transform=transform_test, root_dir=path_data
-    )
-    test_dataset = TrafficSignDataset(
-        list_test, label_list, transform=transform_test, root_dir=path_data
-    )
-
-    class_to_search_on = [81, 14, 3, 94, 35, 31, 28, 17, 13, 86]
-
-    for class_ in class_to_search_on:
-        train_dataset.remove_datapoints(train_dataset.get_index_in_class(class_)[N:])
-        train_dataset.update_classes_indexes()
-
-        assert len(train_dataset.get_index_in_class(class_)) == N
-
-    n_test = 20
-    for class_ in class_to_search_on:
-        test_dataset.remove_datapoints(test_dataset.get_index_in_class(class_)[n_test:])
-        test_dataset.update_classes_indexes()
-
-        assert len(test_dataset.get_index_in_class(class_)) == n_test
-
-    def get_dataset():
-        return train_dataset, eval_dataset, test_dataset
-
-    return torch.Tensor(class_to_search_on).long(), get_dataset
-
-
 def get_data_cifar_10(path_data, N, limit_search=None):
     with open("thesis_data_search/pickles/cifar_10/train.pkl", "rb") as f:
         list_train = pickle.load(f)
@@ -403,12 +381,71 @@ def get_data_cifar_10(path_data, N, limit_search=None):
 
         assert len(train_dataset.get_index_in_class(class_)) == N
 
-    n_test = 100
+    if not limit_search:
+        limit_search = 100
+
     for class_ in class_to_search_on:
-        test_dataset.remove_datapoints(test_dataset.get_index_in_class(class_)[n_test:])
+        test_dataset.remove_datapoints(
+            test_dataset.get_index_in_class(class_)[limit_search:]
+        )
         test_dataset.update_classes_indexes()
 
-        assert len(test_dataset.get_index_in_class(class_)) == n_test
+        assert len(test_dataset.get_index_in_class(class_)) == limit_search
+
+    def get_dataset():
+        return train_dataset, eval_dataset, test_dataset
+
+    return torch.Tensor(class_to_search_on).long(), get_dataset
+
+
+def get_data_cars(path_data, N, limit_search=None):
+
+    transform, transform_test = get_transform_cars()
+
+    dataset_train_eval = StanfordCars(
+        root=path_data, split="train", transform=transform, download=True
+    )
+
+    dataset_train = StanfordCars(
+        root=path_data, split="train", transform=transform, download=True
+    )
+
+    dataset_eval = StanfordCars(
+        root=path_data, split="train", transform=transform, download=True
+    )
+
+    len_ = len(dataset_train_eval)
+    len_train = int(len_ * 0.9)
+
+    random.Random(42).shuffle(dataset_train_eval._samples)
+
+    dataset_train._samples = dataset_train_eval._samples[0:len_train]
+    dataset_eval._samples = dataset_train_eval._samples[len_train:]
+    train_dataset = CarsDataset(dataset_train)
+    eval_dataset = CarsDataset(dataset_eval)
+    dataset_test = StanfordCars(
+        root=path_data, split="test", transform=transform, download=True
+    )
+    test_dataset = CarsDataset(dataset_test)
+
+    class_to_search_on = [87, 79, 28, 26, 32, 46, 18, 108, 107, 139]
+
+    for class_ in class_to_search_on:
+        train_dataset.remove_datapoints(train_dataset.get_index_in_class(class_)[N:])
+        train_dataset.update_classes_indexes()
+
+        assert len(train_dataset.get_index_in_class(class_)) == N
+
+    if not limit_search:
+        limit_search = 20
+
+    for class_ in class_to_search_on:
+        test_dataset.remove_datapoints(
+            test_dataset.get_index_in_class(class_)[limit_search:]
+        )
+        test_dataset.update_classes_indexes()
+
+        assert len(test_dataset.get_index_in_class(class_)) == limit_search
 
     def get_dataset():
         return train_dataset, eval_dataset, test_dataset
