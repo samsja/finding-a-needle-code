@@ -368,7 +368,7 @@ def get_data_cifar(path_data, N, limit_search=None):
     def get_dataset():
         return train_dataset, eval_dataset, test_dataset
 
-    return class_to_search_on, get_dataset
+    return torch.Tensor(class_to_search_on).long(), get_dataset
 
 
 def prepare_dataset(
