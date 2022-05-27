@@ -174,7 +174,7 @@ class StandardNetSearcher(Searcher):
         self.trainer = TrainerFewShot(self.model_adapter, device, checkpoint=True)
 
         self.optim = torch.optim.Adam(
-            self.model.parameters(), lr=StandardNetSearcher.lr
+            self.model.parameters(), lr=self.__class__.lr
         )
 
         self.scheduler = torch.optim.lr_scheduler.StepLR(
@@ -223,13 +223,21 @@ class StandardNetSearcher(Searcher):
         num_workers,
     ):
         self._train(
-            StandardNetSearcher.epochs,
-            StandardNetSearcher.nb_eval,
-            StandardNetSearcher.batch_size,
+            self.__class__.epochs,
+            self.__class__.nb_eval,
+            self.__class__.batch_size,
             train_dataset,
             eval_dataset,
             num_workers,
         )
+
+
+class CifarStandardNetSearcher(StandardNetSearcher):
+
+    lr = 1e-4
+    epochs = 60
+    nb_eval = epochs
+    batch_size = 256
 
 
 class FreezedStandardNetSearcher(StandardNetSearcher):

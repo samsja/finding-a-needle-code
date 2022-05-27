@@ -9,7 +9,10 @@ from thesis_data_search.few_shot_learning.relation_net import (
     get_features_for_one_class,
 )
 
-from thesis_data_search.few_shot_learning.standard_net import StandardNet, StandardNetAdaptater
+from thesis_data_search.few_shot_learning.standard_net import (
+    StandardNet,
+    StandardNetAdaptater,
+)
 
 from thesis_data_search.utils_plot import imshow
 
@@ -19,6 +22,7 @@ from thesis_data_search.searcher.searcher import (
     NoAdditionalSearcher,
     StandardNetSearcher,
     FreezedStandardNetSearcher,
+    CifarStandardNetSearcher,
 )
 
 from thesis_data_search.datasource import few_shot_param
@@ -253,6 +257,11 @@ def exp_searching(
 
         if model_adapter_search_param in [None, "StandardNet"]:
             search_adaptater = StandardNetSearcher(
+                device, len(train_dataset.classes), debug=debug
+            )
+
+        elif model_adapter_search_param == "CifarStandardNet":
+            search_adaptater = CifarStandardNetSearcher(
                 device, len(train_dataset.classes), debug=debug
             )
 
